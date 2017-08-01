@@ -111,6 +111,7 @@ public:
     void set_points(const std::vector<double>& x,
                     const std::vector<double>& y, bool cubic_spline=true);
     double operator() (double x) const;
+    double derivative (double x) const;
 };
 
 
@@ -391,6 +392,30 @@ double spline::operator() (double x) const
     } else {
         // interpolation
         interpol=((m_a[idx]*h + m_b[idx])*h + m_c[idx])*h + m_y[idx];
+    }
+    return interpol;
+}
+
+
+double spline::derivative (double x) const
+{
+    size_t n=m_x.size();
+    // find the closest point m_x[idx] < x, idx=0 even if x<m_x[0]
+    std::vector<double>::const_iterator it;
+    it=std::lower_bound(m_x.begin(),m_x.end(),x);
+    int idx=std::max( int(it-m_x.begin())-1, 0);
+
+    double h=x-m_x[idx];
+    double interpol;
+    if(x<m_x[0]) {
+        // extrapolation to the left
+        interpol=2.*m_b0*h + m_c0;
+    } else if(x>m_x[n-1]) {
+        // extrapolation to the right
+        interpol=2.*m_b[n-1]*h + m_c[n-1];
+    } else {
+        // interpolation
+        interpol=(3.*m_a[idx]*h + 2.*m_b[idx])*h + m_c[idx];
     }
     return interpol;
 }

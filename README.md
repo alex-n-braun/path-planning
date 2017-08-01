@@ -7,8 +7,8 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 - Dependencies
 - Details on the Simulation
 - Implementation of the Path Planning Algorith
-    - Initial Tests
     - Data Structures
+    - Initial Tests
 
 
 ## Dependencies
@@ -53,15 +53,6 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 
 ## Implementation of the Path Planning Algorithm
 
-### Initial Tests and Finger Exercises
-1. First of all, the connection between the path planner and the simulator has to be made. The code provided by Udacity does so without any change. 
-- Now, a series of waypoints is sent to the simulator in order to make the car move. As with the previous versions of the simulator, I have to set `export LANG=` in order to force the simulator to send numbers in the correct format; it seems some parser does not work correctly if I leave `LANG=de_DE.UTF-8`, as it is the default configuration on my machine.  
-The car now moves with constant velocity (directly into the trees).  
-You will find this test, along with other tests, as `fe_constpeed()` in `fingerexercises.h` and `fingerexercises.cpp`
-- Make the car move on a circle. See `fe_circle()` in `fingerexercises.*`.  
-Of course, the car will not stay on the lane, and eventually other cars will collide.
-- Make the car follow the lane (ignoring other vehicles) by setting the planned path to the waypoints in the map, see `fe_waypoints()`. The car follows the center lane marking on the road with a speed corresponding to the distance of the waypoints divided by the 20ms time steps.
-
 ### Data Structures
 Communication between Simulator and Path Planner is done using uWebSockets library in JSON format. For interpreting the JSON string, the JSON for Modern C++ library by Niels Lohmann is used. 
 
@@ -69,5 +60,15 @@ In order to simplify things, a struct `Telemetry` and a struct `Response` is def
 
 The class `HighwayMap` in `highwaymap.h` and `highwaymap.cpp` handles everything related to the waypoints map provided in the file `data/highway_map.csv`, including methods `distance`, `ClosestWaypoint`, `NextWaypoint`, `getFrenet` and `getXY`, originally provided as functions by Udacity. They have been moved to the class in order to improve the structure of the code.
 
+
+### Initial Tests and Finger Exercises
+1. First of all, the connection between the path planner and the simulator has to be made. The code provided by Udacity does so without any change. 
+- Now, a series of waypoints is sent to the simulator in order to make the car move. As with the previous versions of the simulator, I have to set `export LANG=` in order to force the simulator to send numbers in the correct format; it seems some parser does not work correctly if I leave `LANG=de_DE.UTF-8`, as it is the default configuration on my machine.  
+The car now moves with constant velocity (directly into the trees).  
+You will find this test, along with other tests, as `fe_constpeed()` in `fingerexercises.h` and `fingerexercises.cpp`
+- Make the car move on a circle. See `fe_circle()` in `fingerexercises.*`.  
+Of course, the car will not stay on the lane, and eventually other cars will collide.
+- Make the car follow the center of the street (ignoring other vehicles) by setting the planned path to the waypoints in the map, see `fe_waypoints()`. The car follows the center marking on the road with a speed corresponding to the distance of the waypoints divided by the 20ms time steps.
+- Make the car follow the right lane (ignoring other vehicles). We do so by using the `getXY` method as well as the `getSmoothXY` method of `HighwayMap`. The first one interpolates linearly between the waypoints, the second one uses the spline library by Tino Kluge. Note: the spline class was extended by a method `derivative` in order to compute the first derivative of the spline. If the center of the street, given by the waypoints, is used to define a spline, the `derivative` method then allows easily to compute a normal vector on any point of the center line. This in turn can be used to compute a smooth (s,d)=>(x,y) transformation.
 
 
