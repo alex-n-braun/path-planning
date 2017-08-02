@@ -11,12 +11,12 @@ public:
   tk::spline spline_x;
   tk::spline spline_y;
   TrajectorySpline();
-  TrajectorySpline(const dvector & s, const dvector & x, const dvector & y);
-  dvector operator()(double s) const;
-  dvector tangent(double s) const;
-  dvector normal(double s) const;
-  dvector oriented_curvature(double s) const;
-  double curvature(double s) const;
+  TrajectorySpline(const dvector & time, const dvector & x, const dvector & y);
+  dvector operator()(double time) const;
+  dvector tangent(double time) const;
+  dvector normal(double time) const;
+  dvector oriented_curvature(double time) const;
+  double curvature(double time) const;
 };
 
 #endif // TRAJECTORY_H

@@ -9,6 +9,7 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 - Implementation of the Path Planning Algorith
     - Data Structures
     - Initial Tests
+    - Vehicle Models
 
 
 ## Dependencies
@@ -63,13 +64,18 @@ The class `HighwayMap` in `highwaymap.h` and `highwaymap.cpp` handles everything
 
 ### Initial Tests and Finger Exercises
 1. First of all, the connection between the path planner and the simulator has to be made. The code provided by Udacity does so without any change. 
-- Now, a series of waypoints is sent to the simulator in order to make the car move. As with the previous versions of the simulator, I have to set `export LANG=` in order to force the simulator to send numbers in the correct format; it seems some parser does not work correctly if I leave `LANG=de_DE.UTF-8`, as it is the default configuration on my machine.  
+2. Now, a series of waypoints is sent to the simulator in order to make the car move. As with the previous versions of the simulator, I have to set `export LANG=` in order to force the simulator to send numbers in the correct format; it seems some parser does not work correctly if I leave `LANG=de_DE.UTF-8`, as it is the default configuration on my machine.  
 The car now moves with constant velocity (directly into the trees).  
 You will find this test, along with other tests, as `fe_constpeed()` in `fingerexercises.h` and `fingerexercises.cpp`
-- Make the car move on a circle. See `fe_circle()` in `fingerexercises.*`.  
+3. Make the car move on a circle. See `fe_circle()` in `fingerexercises.*`.  
 Of course, the car will not stay on the lane, and eventually other cars will collide.
-- Make the car follow the center of the street (ignoring other vehicles) by setting the planned path to the waypoints in the map, see `fe_waypoints()`. The car follows the center marking on the road with a speed corresponding to the distance of the waypoints divided by the 20ms time steps.
-- Make the car follow the right lane, `fe_smooth_rightmostlane` (ignoring other vehicles). We do so by using the `getXY` method as well as the `getSmoothXY` method of `HighwayMap`. The first one interpolates linearly between the waypoints, the second one uses the spline library by Tino Kluge. Note: the spline class was extended by a method `derivative` in order to compute the first derivative of the spline. If the center of the street, given by the waypoints, is used to define a spline, the `derivative` method then allows easily to compute a normal vector on any point of the center line. This in turn can be used to compute a smooth (s,d)=>(x,y) transformation.
-- There is one more finger exercise `fe_even_more_smooth_rightmostlane`. Here, we re-use the path information that is sent by the simulator. In order to extend the path to its desired length, we need to know the final s value. The value that is provided by the simulator seems not to be very precise, therefore I tried to use the `getFrenet` method provided by Udacity. Which also seems to be unprecise. Therefore I implemented a method `getSmoothFrenet` in the class `HighwayMap` which iteratively solves the problem to a precision of less than 1mm absolute error in s (not more than 5 iterations needed).
+4. Make the car follow the center of the street (ignoring other vehicles) by setting the planned path to the waypoints in the map, see `fe_waypoints()`. The car follows the center marking on the road with a speed corresponding to the distance of the waypoints divided by the 20ms time steps.
+5. Make the car follow the right lane, `fe_smooth_rightmostlane` (ignoring other vehicles). We do so by using the `getXY` method as well as the `getSmoothXY` method of `HighwayMap`. The first one interpolates linearly between the waypoints, the second one uses the spline library by Tino Kluge. Note: the spline class was extended by a method `derivative` in order to compute the first derivative of the spline. If the center of the street, given by the waypoints, is used to define a spline, the `derivative` method then allows easily to compute a normal vector on any point of the center line. This in turn can be used to compute a smooth (s,d)=>(x,y) transformation.
+6. There is one more finger exercise `fe_even_more_smooth_rightmostlane`. Here, we re-use the path information that is sent by the simulator. In order to extend the path to its desired length, we need to know the final s value. The value that is provided by the simulator seems not to be very precise, therefore I tried to use the `getFrenet` method provided by Udacity. Which also seems to be unprecise. Therefore I implemented a method `getSmoothFrenet` in the class `HighwayMap` which iteratively solves the problem to a precision of less than 1mm absolute error in s (not more than 5 iterations needed).
+7. Finally: in order to fix the speed of the car, the curvature of the road is taken into account `fe_rightmostlane_constspeed`. For this, the spline class was extended by a second derivative.
+
+
+### Vehicle Models
+
 
 

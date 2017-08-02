@@ -5,31 +5,31 @@ TrajectorySpline::TrajectorySpline()
 
 }
 
-TrajectorySpline::TrajectorySpline(const dvector & s, const dvector & x, const dvector & y)
+TrajectorySpline::TrajectorySpline(const dvector & time, const dvector & x, const dvector & y)
 {
-  spline_x.set_points(s, x);
-  spline_y.set_points(s, y);
+  spline_x.set_points(time, x);
+  spline_y.set_points(time, y);
 }
 
-dvector TrajectorySpline::operator()(double s) const
+dvector TrajectorySpline::operator()(double time) const
 {
-  return {spline_x(s), spline_y(s)};
+  return {spline_x(time), spline_y(time)};
 }
 
-dvector TrajectorySpline::tangent(double s) const
+dvector TrajectorySpline::tangent(double time) const
 {
-  return {spline_x.derivative(s), spline_y.derivative(s)};
+  return {spline_x.derivative(time), spline_y.derivative(time)};
 }
 
-dvector TrajectorySpline::normal(double s) const
+dvector TrajectorySpline::normal(double time) const
 {
-  return {spline_y.derivative(s), -spline_x.derivative(s)};
+  return {spline_y.derivative(time), -spline_x.derivative(time)};
 }
 
-dvector TrajectorySpline::oriented_curvature(double s) const // se definition of curvature on wikipedia
+dvector TrajectorySpline::oriented_curvature(double time) const // se definition of curvature on wikipedia
 {
-  dvector d1(tangent(s));
-  dvector d2({spline_x.derivative2(s), spline_y.derivative2(s)});
+  dvector d1(tangent(time));
+  dvector d2({spline_x.derivative2(time), spline_y.derivative2(time)});
   // matrix A be given by d1 and d2 as columns; then the determinant of A is
   double det(d1[0]*d2[1]-d1[1]*d2[0]);
 
@@ -48,10 +48,10 @@ dvector TrajectorySpline::oriented_curvature(double s) const // se definition of
   return scalevec(n, det/len2*len2);
 }
 
-double TrajectorySpline::curvature(double s) const // se definition of curvature on wikipedia
+double TrajectorySpline::curvature(double time) const // se definition of curvature on wikipedia
 {
-  dvector d1(tangent(s));
-  dvector d2({spline_x.derivative2(s), spline_y.derivative2(s)});
+  dvector d1(tangent(time));
+  dvector d2({spline_x.derivative2(time), spline_y.derivative2(time)});
   // matrix A be given by d1 and d2 as columns; then the determinant of A is
   double det(d1[0]*d2[1]-d1[1]*d2[0]);
 
