@@ -10,5 +10,7 @@ Response fe_circle(const Telemetry & t);
 Response fe_waypoints(const Telemetry & t, const HighwayMap & m);
 Response fe_rightmostlane(const Telemetry &t, const HighwayMap &m);
 Response fe_smooth_rightmostlane(const Telemetry &t, const HighwayMap &m);
+Response fe_even_more_smooth_rightmostlane(const Telemetry &t, const HighwayMap &m);
+Response fe_rightmostlane_constspeed(const Telemetry &t, const HighwayMap &m);
 
 #endif // FINGEREXERCISES_H

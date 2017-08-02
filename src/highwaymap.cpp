@@ -1,6 +1,7 @@
+#include <math.h>
 #include <string>
 #include <sstream>
-#include <math.h>
+#include <iostream>
 #include "helpers.h"
 #include "highwaymap.h"
 
@@ -42,8 +43,7 @@ HighwayMap::HighwayMap(std::ifstream &in_map)
   std::vector<double> ext_y(map_waypoints_y);
   ext_y.push_back(map_waypoints_y[0]);
 
-  map_splines_x.set_points(ext_s, ext_x);
-  map_splines_y.set_points(ext_s, ext_y);
+  map_trajectory = TrajectorySpline(ext_s, ext_x, ext_y);
 }
 
 double HighwayMap::distance(double x1, double y1, double x2, double y2) const
@@ -95,7 +95,7 @@ int HighwayMap::NextWaypoint(double x, double y, double theta) const
 
 }
 
-std::vector<double> HighwayMap::getFrenet(double x, double y, double theta) const
+dvector HighwayMap::getFrenet(double x, double y, double theta) const
 {
   int next_wp = NextWaypoint(x,y, theta);
 
@@ -144,7 +144,49 @@ std::vector<double> HighwayMap::getFrenet(double x, double y, double theta) cons
 
 }
 
-std::vector<double> HighwayMap::getXY(double s, double d) const
+/* intention: provide a better solution that is exact in the range
+ * of a given error.
+ * We achieve this with the help of an iterative solver with maximum
+ * number of iterations.
+ */
+//double maxiterations__(0);
+dvector HighwayMap::getSmoothFrenet(double x, double y) const
+{
+  // find closest waypoint
+  int i_c_wp = ClosestWaypoint(x,y);
+
+  // and get s-value for this waypoint. this serves as initial value.
+  double s(map_waypoints_s[i_c_wp]);
+
+  int i(0);
+  const int maxit(6); // maximum number of iterations
+  const double maxerror(1e-3); // maximum error in unit [m]; 1e-3m = 1mm
+  double proj;
+  do
+  {
+    dvector c_xy(map_trajectory(s)); // x and y for given s, while d=0 (center of the road, c_xy)
+    dvector tangent(map_trajectory.tangent(s)); // tangent in that point
+    dvector delta(diffvec(dvector({x,y}), c_xy)); // delta vector from c_xy to {x,y}
+    proj = projectionlength(tangent, delta); // length of projection of {x,y} on tangent
+    /* the signed length of the projection vector onto the tangent vector for
+     * the current value of s. This is the approximate distance from the actual value
+     * of s to the one we are looking for. In fact, if the road goes straight,
+     * proj holds the exact value we need to correct our s value for.
+     */
+    s+=proj;
+    ++i;
+  } while ((i<maxit) & (dabs(proj)>maxerror));
+  dvector c_xy(map_trajectory(s));
+  double d(lenvec(diffvec(dvector({x,y}), c_xy)));
+
+//  { // for debugging
+//    maxiterations__ = i>maxiterations__ ? i : maxiterations__;
+//    std::cout<<"s: "<<s<<", d: "<<d<<", iterations: "<<i<<", max: "<<maxiterations__<<", error: "<<proj<<std::endl;
+//  }
+  return {s,d};
+}
+
+dvector HighwayMap::getXY(double s, double d) const
 {
   int prev_wp = -1;
 
@@ -171,21 +213,17 @@ std::vector<double> HighwayMap::getXY(double s, double d) const
 
 }
 
-std::vector<double> HighwayMap::getSmoothXY(double s, double d) const
+dvector HighwayMap::getSmoothXY(double s, double d) const
 {
   // center of the street
-  std::vector<double> center({map_splines_x(s), map_splines_y(s)});
-  // tangent vector
-  std::vector<double> tangent({map_splines_x.derivative(s),
-                               map_splines_y.derivative(s)});
-  // normalize tangent vector
-  double l(sqrt(tangent[0]*tangent[0]+tangent[1]*tangent[1]));
-  tangent[0]/=l;
-  tangent[1]/=l;
+  dvector center(map_trajectory(s));
+  // normalized tangent vector
+  dvector tangent(normalvec(map_trajectory.tangent(s)));
+
   // rotate by pi/2 and stretch by d
-  std::vector<double> normal({tangent[1]*d, -tangent[0]*d});
+  dvector normal({tangent[1]*d, -tangent[0]*d});
   // compute position
-  std::vector<double> position({center[0]+normal[0], center[1]+normal[1]});
+  dvector position({center[0]+normal[0], center[1]+normal[1]});
 
   return position;
 }

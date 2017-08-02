@@ -72,7 +72,9 @@ int main() {
             // Response r(fe_circle(telemetry));
             // Response r(fe_waypoints(telemetry, highway_map));
             // Response r(fe_rightmostlane(telemetry, highway_map));
-            Response r(fe_smooth_rightmostlane(telemetry, highway_map));
+            // Response r(fe_smooth_rightmostlane(telemetry, highway_map));
+            // Response r(fe_even_more_smooth_rightmostlane(telemetry, highway_map));
+            Response r(fe_rightmostlane_constspeed(telemetry, highway_map));
             /* end of finger exercises */
 
             msgJson["next_x"] = r.next_x_vals;
@@ -80,7 +82,7 @@ int main() {
 
           	auto msg = "42[\"control\","+ msgJson.dump()+"]";
 
-          	//this_thread::sleep_for(chrono::milliseconds(1000));
+//            this_thread::sleep_for(chrono::milliseconds(500));
           	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
           
         }
