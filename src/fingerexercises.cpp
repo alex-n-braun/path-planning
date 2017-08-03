@@ -209,9 +209,11 @@ Response fe_rightmostlane_constspeed(const Telemetry &t, const HighwayMap &m)
 
     start_s=s;
 
-    if (i==1)
-      std::cout<<index<<", "<<t.car_x<<", "<<t.car_y<<", "<<t.car_s<<", "<<t.car_speed<<", curve: "<<curvature<<", rescale: "<<rescale<<std::endl;
+//    if (i==1)
+//      std::cout<<index<<", "<<t.car_x<<", "<<t.car_y<<", "<<t.car_s<<", "<<t.car_speed<<", curve: "<<curvature<<", rescale: "<<rescale<<std::endl;
   }
+  for (auto s(t.sensor_fusion.begin()); s!=t.sensor_fusion.end(); ++s)
+    std::cout<<s->second<<std::endl;
 
   return r;
 }

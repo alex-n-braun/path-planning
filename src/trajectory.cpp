@@ -1,32 +1,36 @@
 #include "trajectory.h"
 
-TrajectorySpline::TrajectorySpline()
-{
+namespace Trajectory {
 
-}
+Spline::Spline()
+{ }
 
-TrajectorySpline::TrajectorySpline(const dvector & time, const dvector & x, const dvector & y)
+Spline::Spline(const dvector & time, const dvector & x, const dvector & y)
 {
   spline_x.set_points(time, x);
   spline_y.set_points(time, y);
 }
 
-dvector TrajectorySpline::operator()(double time) const
+Spline::Spline(const Spline &spline)
+  : spline_x(spline.spline_x), spline_y(spline.spline_y)
+{ }
+
+dvector Spline::operator()(double time) const
 {
   return {spline_x(time), spline_y(time)};
 }
 
-dvector TrajectorySpline::tangent(double time) const
+dvector Spline::tangent(double time) const
 {
   return {spline_x.derivative(time), spline_y.derivative(time)};
 }
 
-dvector TrajectorySpline::normal(double time) const
+dvector Spline::normal(double time) const
 {
   return {spline_y.derivative(time), -spline_x.derivative(time)};
 }
 
-dvector TrajectorySpline::oriented_curvature(double time) const // se definition of curvature on wikipedia
+dvector Spline::oriented_curvature(double time) const // see definition of curvature on wikipedia
 {
   dvector d1(tangent(time));
   dvector d2({spline_x.derivative2(time), spline_y.derivative2(time)});
@@ -48,7 +52,7 @@ dvector TrajectorySpline::oriented_curvature(double time) const // se definition
   return scalevec(n, det/len2*len2);
 }
 
-double TrajectorySpline::curvature(double time) const // se definition of curvature on wikipedia
+double Spline::curvature(double time) const // see definition of curvature on wikipedia
 {
   dvector d1(tangent(time));
   dvector d2({spline_x.derivative2(time), spline_y.derivative2(time)});
@@ -61,3 +65,4 @@ double TrajectorySpline::curvature(double time) const // se definition of curvat
   return det/(len*len*len);
 }
 
+}

@@ -43,7 +43,7 @@ HighwayMap::HighwayMap(std::ifstream &in_map)
   std::vector<double> ext_y(map_waypoints_y);
   ext_y.push_back(map_waypoints_y[0]);
 
-  map_trajectory = TrajectorySpline(ext_s, ext_x, ext_y);
+  map_trajectory = Trajectory::Spline(ext_s, ext_x, ext_y);
 }
 
 double HighwayMap::distance(double x1, double y1, double x2, double y2) const
@@ -186,6 +186,11 @@ dvector HighwayMap::getSmoothFrenet(double x, double y) const
   return {s,d};
 }
 
+dvector HighwayMap::getSmoothFrenet(const dvector &xy) const
+{
+  return getSmoothFrenet(xy[0], xy[1]);
+}
+
 dvector HighwayMap::getXY(double s, double d) const
 {
   int prev_wp = -1;
@@ -226,6 +231,21 @@ dvector HighwayMap::getSmoothXY(double s, double d) const
   dvector position({center[0]+normal[0], center[1]+normal[1]});
 
   return position;
+}
+
+dvector HighwayMap::getSmoothXY(const dvector &sd) const
+{
+  return {getSmoothXY(sd[0], sd[1])};
+}
+
+dvector HighwayMap::tangent(double s) const
+{
+  return map_trajectory.tangent(s);
+}
+
+double HighwayMap::curvature(double s) const
+{
+  return map_trajectory.curvature(s);
 }
 
 Waypoint HighwayMap::operator[](int i) const

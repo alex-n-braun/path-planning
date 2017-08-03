@@ -54,6 +54,11 @@ dvector normalvec(const dvector & v)
   return scalevec(v, invlength);
 }
 
+dvector projection(const dvector & base, const dvector & v)
+{
+  return scalevec(base, sprod(v, base)/sprod(base, base));
+}
+
 double projectionlength(const dvector & base, const dvector & v)
 {
   return sprod(base, v)/lenvec(base);

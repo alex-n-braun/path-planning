@@ -25,7 +25,7 @@ public:
   std::vector<double> map_waypoints_dy;
 //  tk::spline map_splines_x;
 //  tk::spline map_splines_y;
-  TrajectorySpline map_trajectory;
+  Trajectory::Spline map_trajectory;
   // The max s value before wrapping around the track back to 0
   const double max_s = 6945.554;
   HighwayMap();
@@ -39,12 +39,18 @@ public:
   // Smoothened transform from Cartesian x,y coordinates to Frenet s,d coordinates;
   // see implementation for documentation
   dvector getSmoothFrenet(double x, double y) const;
+  dvector getSmoothFrenet(const dvector & xy) const;
   // Transform from Frenet s,d coordinates to Cartesian x,y
   // (linear interplation between waypoints)
   dvector getXY(double s, double d) const;
   // Transform from Frenet s,d coordinates to Cartesian x,y
   // (spline interpolation)
   dvector getSmoothXY(double s, double d) const;
+  dvector getSmoothXY(const dvector & sd) const;
+  // get tangent on the street
+  dvector tangent(double s) const;
+  // get curvature of the street
+  double curvature(double s) const;
 
   Waypoint operator[](int i) const;
 };

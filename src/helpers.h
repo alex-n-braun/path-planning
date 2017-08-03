@@ -24,6 +24,8 @@ dvector diffvec(const dvector & v1, const dvector & v2);
 dvector scalevec(const dvector & v, double scale);
 // normalized vector
 dvector normalvec(const dvector & v);
+// compute the projection vector (projection of v onto base)
+dvector projection(const dvector & base, const dvector & v);
 // compute the length of the prejection of v on base
 double projectionlength(const dvector & base, const dvector & v);
 

@@ -5,6 +5,7 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 
 ## Table of Contents
 - Dependencies
+- Contents of the Submission
 - Details on the Simulation
 - Implementation of the Path Planning Algorith
     - Data Structures
@@ -24,6 +25,9 @@ Planning a Path for an Autonomous Vehicle in a Simulator
     cd uWebSockets
     git checkout e94b6e1
     ```
+
+
+## Contents of the Submission
 
 
 ## Details on the Simulation
@@ -101,7 +105,7 @@ The common structure looks as follows: the model class defines four subclasses, 
 4. `Update`: this class computes an update for the state of the vehicle, given the properties of the vehicle, the actual state, an actuation, and a delta time. For a point particle, as mentioned above, there are no properties. The update for (x,y,vx,vy) is simply dt\*(vx,vy,ax,ay). We neglect the contribution of the acceleration on the positional update, which would be 0.5\*ax\*dt^2 and 0.5\*ay\*dt^2, assuming that this is a reasonable approximation.
 For a bike, as mentioned before, the distance of the axes is the property. The update for (x, y, theta, v) is given by dt\*(v cos(theta), v sin(theta), v/L tan(delta), a).
 
-Both models contain a method to set its state, `set_state`, as well as three methods to evolve the state in time: `advance`, `advance_state` and `advanced_vehicle`. The three latter methods all perform the same update action, but
+Both models contain a method to set its state, `set_state`, as well as three methods to evolve the state in time: `advance`, `advance_state` and `advanced_vehicle`. The three latter methods all perform the same update action, where
 
 1. `advance` returns a state object containing the advanced state,
 
@@ -109,7 +113,6 @@ Both models contain a method to set its state, `set_state`, as well as three met
 
 3. `advanced_vehicle` generates a new instance of the vehicle (in the updated state), without altering the state of the given instance.
 
-These methods are defined for convenience; I will see which one I will need.
-
+These methods are defined for convenience; I will see which one is best suited for my needs.
 
 
