@@ -1,6 +1,7 @@
 #include "fingerexercises.h"
 #include "helpers.h"
 #include "trajectory.h"
+#include "models.h"
 
 //constexpr double pi() { return M_PI; }
 //static double deg2rad(double x) { return x * pi() / 180; }
