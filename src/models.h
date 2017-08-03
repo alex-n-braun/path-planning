@@ -45,10 +45,12 @@ public:
 
   MovingPoint(double x_, double y_, double vx_, double vy_);
   MovingPoint(const MovingPoint & mp);
+  MovingPoint(const State & s_, const Properties & p_);
 
-  State advance(const Actuation & a, double delta_t);
-  void advance_state(const Actuation & a, double delta_t);
   void set_state(const State & newstate);
+  State advance(const Actuation & a, double delta_t) const;
+  void advance_state(const Actuation & a, double delta_t);
+  MovingPoint advanced_vehicle(const Actuation & a, double delta_t) const;
 };
 
 
@@ -95,10 +97,12 @@ public:
 
   Bicycle(double x_, double y_, double theta_, double speed_, double L_ = 4.); // default length 4 m
   Bicycle(const Bicycle & bike);
+  Bicycle(const State & s_, const Properties & p_);
 
-  State advance(const Actuation & a, double delta_t);
-  void advance_state(const Actuation & a, double delta_t);
   void set_state(const State & newstate);
+  State advance(const Actuation & a, double delta_t) const;
+  void advance_state(const Actuation & a, double delta_t);
+  Bicycle advanced_vehicle(const Actuation & a, double delta_t) const;
 };
 
 

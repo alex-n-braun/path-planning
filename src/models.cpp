@@ -80,13 +80,21 @@ Models::MovingPoint::MovingPoint(const Models::MovingPoint &mp)
   : state(mp.state), properties(mp.properties)
 { }
 
-Models::MovingPoint::State Models::MovingPoint::advance(const Actuation &a, double delta_t)
+Models::MovingPoint::MovingPoint(const Models::MovingPoint::State &s, const Properties & p_)
+  : state(s), properties(p_)
+{ }
+
+void Models::MovingPoint::set_state(const Models::MovingPoint::State &newstate)
+{
+  state=newstate;
+}
+
+Models::MovingPoint::State Models::MovingPoint::advance(const Actuation &a, double delta_t) const
 {
   Models::MovingPoint::Update update(properties, state, a, delta_t);
   Models::MovingPoint::State newstate(state, update);
   return newstate;
 }
-
 
 void Models::MovingPoint::advance_state(const Models::MovingPoint::Actuation & a, double delta_t)
 {
@@ -94,9 +102,9 @@ void Models::MovingPoint::advance_state(const Models::MovingPoint::Actuation & a
   set_state(newstate);
 }
 
-void Models::MovingPoint::set_state(const Models::MovingPoint::State &newstate)
+Models::MovingPoint Models::MovingPoint::advanced_vehicle(const Models::MovingPoint::Actuation &a, double delta_t) const
 {
-  state=newstate;
+  return Models::MovingPoint(advance(a, delta_t), properties);
 }
 
 /*
@@ -196,7 +204,16 @@ Models::Bicycle::Bicycle(const Models::Bicycle &bike)
   : state(bike.state), properties(bike.properties)
 { }
 
-Models::Bicycle::State Models::Bicycle::advance(const Actuation &a, double delta_t)
+Models::Bicycle::Bicycle(const Models::Bicycle::State &s_, const Properties & p_)
+  : state(s_), properties(p_)
+{ }
+
+void Models::Bicycle::set_state(const Models::Bicycle::State &newstate)
+{
+  state=newstate;
+}
+
+Models::Bicycle::State Models::Bicycle::advance(const Actuation &a, double delta_t) const
 {
   Models::Bicycle::Update update(properties, state, a, delta_t);
   Models::Bicycle::State newstate(state, update);
@@ -210,7 +227,7 @@ void Models::Bicycle::advance_state(const Models::Bicycle::Actuation & a, double
   set_state(newstate);
 }
 
-void Models::Bicycle::set_state(const Models::Bicycle::State &newstate)
+Models::Bicycle Models::Bicycle::advanced_vehicle(const Models::Bicycle::Actuation &a, double delta_t) const
 {
-  state=newstate;
+  return Models::Bicycle(advance(a, delta_t), properties);
 }
