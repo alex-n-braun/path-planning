@@ -61,6 +61,4 @@ Straight::Straight(const Straight &prediction)
     xy(prediction.xy), sd(prediction.sd)
 { }
 
-
-
 }

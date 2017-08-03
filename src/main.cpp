@@ -12,6 +12,7 @@
 #include "highwaymap.h"
 #include "fingerexercises.h"
 #include "helpers.h"
+#include "records.h"
 
 using namespace std;
 
@@ -42,7 +43,12 @@ int main() {
   ifstream in_map_(map_file_.c_str(), ifstream::in);
   HighwayMap highway_map(in_map_);
 
-  h.onMessage([&highway_map](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  chrono::system_clock::time_point start_time = chrono::system_clock::now();
+
+  // recording sensor detections of cars in a certain range in s direction
+  Records records(80);
+
+  h.onMessage([&highway_map, &records, start_time](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -52,6 +58,7 @@ int main() {
     if (length && length > 2 && data[0] == '4' && data[1] == '2') {
 
       auto s = hasData(data);
+//      std::cout<<s<<std::endl;
 
       if (s != "") {
         auto j = json::parse(s);
@@ -60,10 +67,15 @@ int main() {
         
         if (event == "telemetry") {
           // j[1] is the data JSON object
+
+            auto duration(chrono::system_clock::now()-start_time);
+            auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
+
+            double time_stamp(double(millis)*1e-3); // time stamp in seconds
           
             Telemetry telemetry(j[1]);
 
-          	json msgJson;
+            records.update(time_stamp, telemetry);
 
           	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -77,6 +89,7 @@ int main() {
             Response r(fe_rightmostlane_constspeed(telemetry, highway_map));
             /* end of finger exercises */
 
+            json msgJson;
             msgJson["next_x"] = r.next_x_vals;
             msgJson["next_y"] = r.next_y_vals;
 
