@@ -13,6 +13,7 @@
 #include "fingerexercises.h"
 #include "helpers.h"
 #include "records.h"
+#include "predictions.h"
 
 using namespace std;
 
@@ -44,11 +45,13 @@ int main() {
   HighwayMap highway_map(in_map_);
 
   chrono::system_clock::time_point start_time = chrono::system_clock::now();
+  double old_time_stamp(0);
 
   // recording sensor detections of cars in a certain range in s direction
-  Records records(80);
+  Records records(250);
 
-  h.onMessage([&highway_map, &records, start_time](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+  h.onMessage([&highway_map, &records, start_time, &old_time_stamp]
+              (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -74,19 +77,41 @@ int main() {
             double time_stamp(double(millis)*1e-3); // time stamp in seconds
           
             Telemetry telemetry(j[1]);
+            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
+                    <<", s: "<<telemetry.car_s
+                    <<std::endl;
 
+            // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+
+            // update the records of the car's telemetry data
             records.update(time_stamp, telemetry);
 
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
+            // generate predictions of the other car's behavior
+            Predictions::Predictions predictions(records, highway_map, 1.0, 12);
 
             /* finger exercises */
-            // Response r(fe_constspeed(telemetry));
-            // Response r(fe_circle(telemetry));
-            // Response r(fe_waypoints(telemetry, highway_map));
-            // Response r(fe_rightmostlane(telemetry, highway_map));
-            // Response r(fe_smooth_rightmostlane(telemetry, highway_map));
-            // Response r(fe_even_more_smooth_rightmostlane(telemetry, highway_map));
-            Response r(fe_rightmostlane_constspeed(telemetry, highway_map));
+            Response r;
+            if (time_stamp>1.)
+            {
+            //  r=fe_constspeed(telemetry);
+            //  r=fe_circle(telemetry);
+            //  r=fe_waypoints(telemetry, highway_map);
+            //  r=fe_rightmostlane(telemetry, highway_map);
+            //  r=fe_smooth_rightmostlane(telemetry, highway_map);
+            //  r=fe_even_more_smooth_rightmostlane(telemetry, highway_map);
+            //  r=fe_rightmostlane_constspeed(telemetry, highway_map);
+            //  r=fe_rightmostlane_constdist(telemetry, highway_map, records, predictions);
+            //  r=fe_minjerk(telemetry, highway_map, records, predictions);
+              r=fe_evenmore_minjerk(telemetry, highway_map, records, predictions);
+            }
+            else
+            {
+              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-200., 2.+4.+3.5);
+              double x(xy[0]);
+              double y(xy[1]);
+              r.next_x_vals={x, x, x, x, x};
+              r.next_y_vals={y, y, y, y, y};
+            }
             /* end of finger exercises */
 
             json msgJson;
@@ -95,9 +120,10 @@ int main() {
 
           	auto msg = "42[\"control\","+ msgJson.dump()+"]";
 
-//            this_thread::sleep_for(chrono::milliseconds(500));
+//            this_thread::sleep_for(chrono::milliseconds(1000));
           	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
-          
+
+            old_time_stamp = time_stamp;
         }
       } else {
         // Manual driving

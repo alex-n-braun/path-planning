@@ -27,11 +27,12 @@ public:
 //  tk::spline map_splines_y;
   Trajectory::Spline map_trajectory;
   // The max s value before wrapping around the track back to 0
-  const double max_s = 6945.554;
+  static const double max_s;
   HighwayMap();
   HighwayMap(std::ifstream & in_map);
 
   double distance(double x1, double y1, double x2, double y2) const;
+  static double distance_s(double s1, double s2);
   int ClosestWaypoint(double x, double y) const;
   int NextWaypoint(double x, double y, double theta) const;
   // Transform from Cartesian x,y coordinates to Frenet s,d coordinates

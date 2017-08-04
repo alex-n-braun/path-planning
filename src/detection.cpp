@@ -72,7 +72,7 @@ Record::Record()
   : id(-1), v(0), current(0), full(false)
 { }
 
-Record::Record(int id_, int size_=20)
+Record::Record(int id_, int size_)
   : id(id_), v(size_), current(0), full(false)
 { }
 
@@ -83,6 +83,8 @@ Record::Record(const Record &rec)
 void Record::record(double time_stamp, const Detection &d)
 {
   v[current] = std::pair<double, dvector>(time_stamp, d.v);
+//  if (!full)
+//    std::cout<<d.id<<" : "<<lenvec(d.speed())<<std::endl;
   current++; current%=v.size();
   if (current==0)
     full=true;
@@ -99,17 +101,19 @@ std::pair<double, Detection> Record::operator[](int i) const
       ss<<"is empty.";
     else
       ss<<"has only "<<current<<"elements.";
+    std::cerr<<ss.str()<<std::endl;
+    throw ss.str();
   }
   else
   {
-    const std::pair<double, dvector> & element(v[read_posn]);
+    const std::pair<double, dvector> element(v[read_posn]);
     return std::pair<double, Detection>(element.first, Detection(id, element.second));
   }
 }
 
 std::pair<double, Detection> Record::get_last() const
 {
-  return operator[](size()-1);
+  return (*this)[size()-1];
 }
 
 int Record::size() const

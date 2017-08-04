@@ -7,11 +7,13 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 - Dependencies
 - Contents of the Submission
 - Details on the Simulation
-- Implementation of the Path Planning Algorith
+- Preparations
     - Data Structures
     - Initial Tests
     - Vehicle Models
-
+    - (Recording of) Sensor Fusion Data
+- Implementation of the Path Planning Algorith
+    - Prediction
 
 ## Dependencies
 * cmake >= 3.5
@@ -56,7 +58,7 @@ Planning a Path for an Autonomous Vehicle in a Simulator
 * There will be some latency between the simulator running and the path planner returning a path, with optimized code usually its not very long maybe just 1-3 time steps. During this delay the simulator will continue using points that it was last given.
 
 
-## Implementation of the Path Planning Algorithm
+## Preparations
 
 ### Data Structures
 Communication between Simulator and Path Planner is done using uWebSockets library in JSON format. For interpreting the JSON string, the JSON for Modern C++ library by Niels Lohmann is used. 
@@ -82,7 +84,9 @@ Of course, the car will not stay on the lane, and eventually other cars will col
 
 6. There is one more finger exercise `fe_even_more_smooth_rightmostlane`. Here, we re-use the path information that is sent by the simulator. In order to extend the path to its desired length, we need to know the final s value. The value that is provided by the simulator seems not to be very precise, therefore I tried to use the `getFrenet` method provided by Udacity. Which also seems to be unprecise. Therefore I implemented a method `getSmoothFrenet` in the class `HighwayMap` which iteratively solves the problem to a precision of less than 1mm absolute error in s (not more than 5 iterations needed).
 
-7. Finally: in order to fix the speed of the car, the curvature of the road is taken into account `fe_rightmostlane_constspeed`. For this, the spline class was extended by a second derivative.
+7. In order to fix the speed of the car, the curvature of the road is taken into account `fe_rightmostlane_constspeed`. For this, the spline class was extended by a second derivative.
+
+8. In `fe_rightmostlane_constdist` the speed is scaled down to a value that corresponds to the speed of the car ahead of the ego car. For this, a simple planning (assuming constant speed of the other cars) is used to predict the distance in the future. For the prediction, see `predictions.` and `predictions.cpp`
 
 
 ### Vehicle Models
@@ -115,4 +119,13 @@ Both models contain a method to set its state, `set_state`, as well as three met
 
 These methods are defined for convenience; I will see which one is best suited for my needs.
 
+
+### (Recording of) Sensor Fusion Data
+
+
+
+
+## Implementation of the Path Planning Algorithm
+
+### Prediction
 

@@ -11,9 +11,9 @@
 class Records
 {
 private:
-  std::map<int, Record> records;
   int rec_size;
 public:
+  std::map<int, Record> records;
   double s_range;
   Records(double s_range_);
   void update(double time_stamp, const Telemetry & telemetry);

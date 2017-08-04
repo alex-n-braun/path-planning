@@ -5,6 +5,7 @@
 #include "helpers.h"
 #include "highwaymap.h"
 
+const double HighwayMap::max_s(6945.554);
 
 HighwayMap::HighwayMap()
 {
@@ -37,11 +38,17 @@ HighwayMap::HighwayMap(std::ifstream &in_map)
    * therefore add the first element again (with max_s)
    */
   std::vector<double> ext_s(map_waypoints_s);
+  ext_s.insert(ext_s.begin(), map_waypoints_s[map_waypoints_s.size()-1]-max_s);
   ext_s.push_back(max_s);
+  ext_s.push_back(max_s+map_waypoints_s[1]);
   std::vector<double> ext_x(map_waypoints_x);
+  ext_x.insert(ext_x.begin(), map_waypoints_x[map_waypoints_x.size()-1]);
   ext_x.push_back(map_waypoints_x[0]);
+  ext_x.push_back(map_waypoints_x[1]);
   std::vector<double> ext_y(map_waypoints_y);
+  ext_y.insert(ext_y.begin(), map_waypoints_y[map_waypoints_y.size()-1]);
   ext_y.push_back(map_waypoints_y[0]);
+  ext_y.push_back(map_waypoints_y[1]);
 
   map_trajectory = Trajectory::Spline(ext_s, ext_x, ext_y);
 }
@@ -49,6 +56,17 @@ HighwayMap::HighwayMap(std::ifstream &in_map)
 double HighwayMap::distance(double x1, double y1, double x2, double y2) const
 {
   return sqrt((x2-x1)*(x2-x1)+(y2-y1)*(y2-y1));
+}
+
+double HighwayMap::distance_s(double s1, double s2)
+{
+  double dist(s2-s1);
+  /* loop is closed; even if s2 is larger then s1, s2 could be
+   * "behind" s1
+   */
+  dist = (dist>0.5*max_s ? dist-max_s : dist);
+  dist = (dist<-0.5*max_s ? dist+max_s : dist);
+  return dist;
 }
 
 int HighwayMap::ClosestWaypoint(double x, double y) const
