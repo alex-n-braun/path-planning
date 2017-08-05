@@ -14,6 +14,7 @@
 #include "helpers.h"
 #include "records.h"
 #include "predictions.h"
+#include "ego.h"
 
 using namespace std;
 
@@ -48,9 +49,12 @@ int main() {
   double old_time_stamp(0);
 
   // recording sensor detections of cars in a certain range in s direction
-  Records records(250);
+  Records records(250. /* range in m */);
 
-  h.onMessage([&highway_map, &records, start_time, &old_time_stamp]
+  // ego object
+  Ego ego;
+
+  h.onMessage([&ego, &highway_map, &records, start_time, &old_time_stamp]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -89,30 +93,44 @@ int main() {
             // generate predictions of the other car's behavior
             Predictions::Predictions predictions(records, highway_map, 1.0, 12);
 
-            /* finger exercises */
             Response r;
+//            /* finger exercises */
+//            if (time_stamp>-1.)
+//            {
+//            //  r=fe_constspeed(telemetry);
+//            //  r=fe_circle(telemetry);
+//            //  r=fe_waypoints(telemetry, highway_map);
+//            //  r=fe_rightmostlane(telemetry, highway_map);
+//            //  r=fe_smooth_rightmostlane(telemetry, highway_map);
+//            //  r=fe_even_more_smooth_rightmostlane(telemetry, highway_map);
+//            //  r=fe_rightmostlane_constspeed(telemetry, highway_map);
+//            //  r=fe_rightmostlane_constdist(telemetry, highway_map, records, predictions);
+//            //  r=fe_minjerk(telemetry, highway_map, records, predictions);
+//              r=fe_evenmore_minjerk(telemetry, highway_map, records, predictions);
+//            }
+//            else
+//            {
+//              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-200., 2.+4.+3.5);
+//              double x(xy[0]);
+//              double y(xy[1]);
+//              r.next_x_vals={x, x, x, x, x};
+//              r.next_y_vals={y, y, y, y, y};
+//            }
+//            /* end of finger exercises */
+
             if (time_stamp>1.)
             {
-            //  r=fe_constspeed(telemetry);
-            //  r=fe_circle(telemetry);
-            //  r=fe_waypoints(telemetry, highway_map);
-            //  r=fe_rightmostlane(telemetry, highway_map);
-            //  r=fe_smooth_rightmostlane(telemetry, highway_map);
-            //  r=fe_even_more_smooth_rightmostlane(telemetry, highway_map);
-            //  r=fe_rightmostlane_constspeed(telemetry, highway_map);
-            //  r=fe_rightmostlane_constdist(telemetry, highway_map, records, predictions);
-            //  r=fe_minjerk(telemetry, highway_map, records, predictions);
-              r=fe_evenmore_minjerk(telemetry, highway_map, records, predictions);
+              r = ego.path(telemetry, highway_map, records, predictions);
             }
             else
             {
-              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-200., 2.+4.+3.5);
+              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-400., 2.+4.+3.5);
               double x(xy[0]);
               double y(xy[1]);
               r.next_x_vals={x, x, x, x, x};
               r.next_y_vals={y, y, y, y, y};
             }
-            /* end of finger exercises */
+
 
             json msgJson;
             msgJson["next_x"] = r.next_x_vals;
@@ -120,7 +138,7 @@ int main() {
 
           	auto msg = "42[\"control\","+ msgJson.dump()+"]";
 
-//            this_thread::sleep_for(chrono::milliseconds(1000));
+//            this_thread::sleep_for(chrono::milliseconds(500));
           	ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
 
             old_time_stamp = time_stamp;
@@ -147,8 +165,9 @@ int main() {
     }
   });
 
-  h.onConnection([&h](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
+  h.onConnection([&h, &ego](uWS::WebSocket<uWS::SERVER> ws, uWS::HttpRequest req) {
     std::cout << "Connected!!!" << std::endl;
+    ego.re_init();
   });
 
   h.onDisconnection([&h](uWS::WebSocket<uWS::SERVER> ws, int code,

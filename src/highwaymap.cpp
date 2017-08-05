@@ -69,6 +69,19 @@ double HighwayMap::distance_s(double s1, double s2)
   return dist;
 }
 
+bool HighwayMap::is_ahead(double s1, double s2)
+// is s2 ahead of s1? not simply s2>s1, take loop into account
+{
+  return HighwayMap::distance_s(s1, s2) > 0;
+}
+
+double HighwayMap::range_s(double s)
+{
+  while (s>HighwayMap::max_s) s-=HighwayMap::max_s;
+  while (s<0) s+=HighwayMap::max_s;
+  return s;
+}
+
 int HighwayMap::ClosestWaypoint(double x, double y) const
 {
 
@@ -259,6 +272,12 @@ dvector HighwayMap::getSmoothXY(const dvector &sd) const
 dvector HighwayMap::tangent(double s) const
 {
   return map_trajectory.tangent(s);
+}
+
+dvector HighwayMap::orthogonal(double s) const
+{
+  dvector t(tangent(s));
+  return {t[1], -t[0]};
 }
 
 double HighwayMap::curvature(double s) const

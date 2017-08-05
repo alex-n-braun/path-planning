@@ -86,7 +86,7 @@ Of course, the car will not stay on the lane, and eventually other cars will col
 
 7. In order to fix the speed of the car, the curvature of the road is taken into account `fe_rightmostlane_constspeed`. For this, the spline class was extended by a second derivative.
 
-8. In `fe_rightmostlane_constdist` the speed is scaled down to a value that corresponds to the speed of the car ahead of the ego car. For this, a simple planning (assuming constant speed of the other cars) is used to predict the distance in the future. For the prediction, see `predictions.` and `predictions.cpp`
+8. In `fe_rightmostlane_constdist` the speed is scaled down to a value that corresponds to the speed of the car ahead of the ego car. For this, a simple planning (assuming constant speed of the other cars) is used to predict the distance in the future. For the prediction, see `predictions.h` and `predictions.cpp`
 
 
 ### Vehicle Models

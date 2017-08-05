@@ -33,6 +33,8 @@ public:
 
   double distance(double x1, double y1, double x2, double y2) const;
   static double distance_s(double s1, double s2);
+  static bool is_ahead(double s1, double s2);
+  static double range_s(double s);
   int ClosestWaypoint(double x, double y) const;
   int NextWaypoint(double x, double y, double theta) const;
   // Transform from Cartesian x,y coordinates to Frenet s,d coordinates
@@ -50,6 +52,8 @@ public:
   dvector getSmoothXY(const dvector & sd) const;
   // get tangent on the street
   dvector tangent(double s) const;
+  // get orthogonal on the street
+  dvector orthogonal(double s) const;
   // get curvature of the street
   double curvature(double s) const;
 

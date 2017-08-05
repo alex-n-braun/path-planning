@@ -477,7 +477,7 @@ Response fe_minjerk(const Telemetry &t, const HighwayMap &m,
   return r;
 }
 
-Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m,
+Response fe_evenmore_minjerk_old(const Telemetry &t, const HighwayMap &m,
                                     const Records & records, const Predictions::Predictions & predictions)
 {
   Response r;
@@ -490,20 +490,62 @@ Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m,
    */
 
   int path_size = t.previous_path_x.size();
-  path_size = (path_size > 25 ? 25 : path_size);
+  path_size = (path_size > 226 ? 226 : path_size);
   for(int i = 0; i < path_size; i++)
   {
       r.next_x_vals.push_back(t.previous_path_x[i]);
       r.next_y_vals.push_back(t.previous_path_y[i]);
   }
+  path_size--;
+  path_size = (path_size < 0 ? 0 : path_size);
 
   // state at the end of the pre-planned path
-  dvector start_sd(path_size>0 ? m.getSmoothFrenet(t.previous_path_x[path_size-1], t.previous_path_y[path_size-1]) : dvector({t.car_s, t.car_d}));
+  dvector start_sd(path_size>0 ? m.getSmoothFrenet(r.next_x_vals[path_size-1], r.next_y_vals[path_size-1]) : dvector({t.car_s, t.car_d}));
   double start_s(start_sd[0]);
   double start_d(start_sd[1]);
-  dvector v_start_speed(path_size>1
-                      ? dvector({(r.next_x_vals[path_size-1]-r.next_x_vals[path_size-2])/0.02, (r.next_y_vals[path_size-1]-r.next_y_vals[path_size-2])/0.02})
-                      : dvector({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)}));
+
+  dvector v_start_speed;
+  dvector v_start_speed_t;
+  double start_speed_t;
+  double start_speed_o;
+  if (path_size>1)
+  {
+    v_start_speed = dvector({(r.next_x_vals[path_size-1]-r.next_x_vals[path_size-2])/0.02,
+                              (r.next_y_vals[path_size-1]-r.next_y_vals[path_size-2])/0.02});
+    // speed in tangential direction of lane
+    dvector start_sd0(m.getSmoothFrenet(r.next_x_vals[path_size-2], r.next_y_vals[path_size-2]));
+    double start_s0(start_sd0[0]);
+    v_start_speed_t = projection(m.tangent(0.5*(start_s+start_s0)), v_start_speed);
+    start_speed_t = lenvec(v_start_speed_t);
+    // orthogonal component
+    start_speed_o = projectionlength(m.orthogonal(0.5*(start_s+start_s0)), v_start_speed);
+    // debugging
+    {
+      dvector test(sumvec(scalevec(normalvec(m.tangent(0.5*(start_s+start_s0))), start_speed_t),
+                          scalevec(normalvec(m.orthogonal(0.5*(start_s+start_s0))), start_speed_o)));
+      std::cout<<start_speed_t<<", "<<start_speed_o<<"; "
+               <<"("<<v_start_speed[0]<<","<<v_start_speed[1]<<") == "
+               <<"("<<test[0]<<","<<test[1]<<") ???"<<std::endl;
+    }
+  }
+  else
+  {
+    v_start_speed = dvector({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)});
+    // speed in tangential direction of lane
+    v_start_speed_t = projection(m.tangent(start_s), v_start_speed);
+    start_speed_t = lenvec(v_start_speed_t);
+    // orthogonal component
+    start_speed_o = projectionlength(m.orthogonal(start_s), v_start_speed);
+    // debugging
+    {
+      dvector test(sumvec(scalevec(normalvec(m.tangent(start_s)), start_speed_t),
+                          scalevec(normalvec(m.orthogonal(start_s)), start_speed_o)));
+      std::cout<<"ini: "<<start_speed_t<<", "<<start_speed_o<<"; "
+               <<"("<<v_start_speed[0]<<","<<v_start_speed[1]<<") == "
+               <<"("<<test[0]<<","<<test[1]<<") ???"<<std::endl;
+    }
+  }
+
   double start_speed(lenvec(v_start_speed));
 
   // goal speed (49.5 Mph)
@@ -523,6 +565,12 @@ Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m,
   const double max_dist(3.*min_dist);
 
   int id_closest_old(-1);
+
+  if (path_size>0)
+  {
+    r.next_x_vals.pop_back();
+    r.next_y_vals.pop_back();
+  }
 
   for (int i(1); i<=125-path_size; ++i)
   {
@@ -621,4 +669,266 @@ Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m,
   return r;
 }
 
+
+
+Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m,
+                                    const Records & records, const Predictions::Predictions & predictions)
+{
+  Response r;
+
+  /* we have computed a path in the previous computation step.
+   * This information can be reused. The simulator sends the
+   * not-yet executed steps in previous_path_*.
+   */
+
+  int path_size = t.previous_path_x.size();
+  path_size = (path_size > 226 ? 226 : path_size);
+  for(int i = 0; i < path_size; i++)
+  {
+      r.next_x_vals.push_back(t.previous_path_x[i]);
+      r.next_y_vals.push_back(t.previous_path_y[i]);
+  }
+  path_size--;
+  path_size = (path_size < 0 ? 0 : path_size);
+
+  // state at the end of the pre-planned path
+  dvector start_sd(path_size>0 ? m.getSmoothFrenet(r.next_x_vals[path_size-1], r.next_y_vals[path_size-1]) : dvector({t.car_s, t.car_d}));
+  double start_s(start_sd[0]);
+  double start_d(start_sd[1]);
+
+  dvector v_start_speed;
+  dvector v_start_speed_t;
+  double start_speed_t;
+  double start_speed_o;
+  if (path_size>1)
+  {
+    v_start_speed = dvector({(r.next_x_vals[path_size-1]-r.next_x_vals[path_size-2])/0.02,
+                              (r.next_y_vals[path_size-1]-r.next_y_vals[path_size-2])/0.02});
+    // speed in tangential direction of lane
+    dvector start_sd0(m.getSmoothFrenet(r.next_x_vals[path_size-2], r.next_y_vals[path_size-2]));
+    double start_s0(start_sd0[0]);
+    v_start_speed_t = projection(m.tangent(0.5*(start_s+start_s0)), v_start_speed);
+    start_speed_t = lenvec(v_start_speed_t);
+    // orthogonal component
+    start_speed_o = projectionlength(m.orthogonal(0.5*(start_s+start_s0)), v_start_speed);
+    // debugging
+    {
+      dvector test(sumvec(scalevec(normalvec(m.tangent(0.5*(start_s+start_s0))), start_speed_t),
+                          scalevec(normalvec(m.orthogonal(0.5*(start_s+start_s0))), start_speed_o)));
+      std::cout<<start_speed_t<<", "<<start_speed_o<<"; "
+               <<"("<<v_start_speed[0]<<","<<v_start_speed[1]<<") == "
+               <<"("<<test[0]<<","<<test[1]<<") ???"<<std::endl;
+    }
+  }
+  else
+  {
+    v_start_speed = dvector({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)});
+    // speed in tangential direction of lane
+    v_start_speed_t = projection(m.tangent(start_s), v_start_speed);
+    start_speed_t = lenvec(v_start_speed_t);
+    // orthogonal component
+    start_speed_o = projectionlength(m.orthogonal(start_s), v_start_speed);
+    // debugging
+    {
+      dvector test(sumvec(scalevec(normalvec(m.tangent(start_s)), start_speed_t),
+                          scalevec(normalvec(m.orthogonal(start_s)), start_speed_o)));
+      std::cout<<"ini: "<<start_speed_t<<", "<<start_speed_o<<"; "
+               <<"("<<v_start_speed[0]<<","<<v_start_speed[1]<<") == "
+               <<"("<<test[0]<<","<<test[1]<<") ???"<<std::endl;
+    }
+//    start_speed_t=10;
+//    start_speed_o=-5;
+  }
+
+  // s component of speed (consider curvature!)
+  double curvature(m.map_trajectory.curvature(start_s));
+  double start_rescale(1.0/(1.0+curvature*start_d));
+  double start_speed_s(start_speed_t * start_rescale);
+
+//  start_speed_s=0; start_speed_o=0;
+
+  // compute start acceleration out of old points
+  double start_accel_o;
+  double start_accel_s;
+  if (t.previous_path_x.size()>path_size)
+  {
+    dvector v_start_speed1(dvector({(r.next_x_vals[path_size]-r.next_x_vals[path_size-1])/0.02,
+                                    (r.next_y_vals[path_size]-r.next_y_vals[path_size-1])/0.02}));
+    dvector v_start_accel = scalevec(diffvec(v_start_speed1, v_start_speed), 1./0.02);
+
+//    dvector start_sd1(m.getSmoothFrenet(t.previous_path_x[path_size], t.previous_path_y[path_size]));
+//    double start_s1(start_sd1[0]);
+
+//    dvector v_start_accel_t(projection(m.tangent(start_s), v_start_accel));
+//    double start_accel_t(projectionlength(m.tangent(start_s), v_start_accel_t));
+    double start_accel_t(projectionlength(m.tangent(start_s), v_start_accel));
+//    start_accel_o = projectionlength(m.orthogonal(start_s), diffvec(v_start_accel, v_start_accel_t));
+    start_accel_o = projectionlength(m.orthogonal(start_s), v_start_accel);
+    start_accel_s = start_accel_t * start_rescale;
+//    start_accel_o = 0.;
+//    start_accel_s = 0.;
+        // debugging
+        {
+          dvector test(sumvec(scalevec(normalvec(m.tangent(start_s)), start_accel_t),
+                              scalevec(normalvec(m.orthogonal(start_s)), start_accel_o)));
+          std::cout<<start_accel_s<<", "<<start_accel_o<<"; "
+                   <<"("<<v_start_accel[0]<<","<<v_start_accel[1]<<") == "
+                   <<"("<<test[0]<<","<<test[1]<<") ???"<<std::endl;
+        }
+  }
+  else
+  {
+    start_accel_o = 0.;
+    start_accel_s = 0.;
+  }
+
+
+  // goal speed (49.5 Mph)
+  double goal_speed(49.5*1.609344/3.6);  // m/s
+
+  // destination lane (0: left lane, 1: middle, 2: right lane)
+  int dest_lane(2);
+  // destination (desired) d
+  double des_d(2.+4.+3.6*double(dest_lane-1));
+
+  // speed in s direction
+  // double goal_rescale(1.0/(1.0+curvature*des_d));
+  double goal_speed_s(goal_speed);
+
+  // jerk-minimizing trajectory with unspecified final s
+//  Trajectory::MinJerk min_jerk(Trajectory::TimeRange(0., 7.5),
+//                               Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
+//                                        {start_s+(325-path_size)*0.01*goal_speed_s, goal_speed_s, 0.}),
+//                               Trajectory::VecRange({start_d, start_speed_o, start_accel_o},
+//                                        {des_d, 0., 0.}), m, 0);
+  // jerk-minimizing trajectory with unspecified final s
+  Trajectory::MinJerk min_jerk(Trajectory::TimeRange(0., 7.5),
+                               Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
+                                        {goal_speed_s, 0., 0.}),
+                               Trajectory::VecRange({start_d, start_speed_o, start_accel_o},
+                                        {des_d, 0., 0.}), m, 1);
+
+  if (path_size>0)
+  {
+    r.next_x_vals.pop_back();
+    r.next_y_vals.pop_back();
+  }
+  for (int i(1); i<=325-path_size; ++i)
+  {
+    double delta_time(double(i)*0.02);
+    dvector xy(min_jerk(delta_time));
+    r.next_x_vals.push_back(xy[0]);
+    r.next_y_vals.push_back(xy[1]);
+  }
+
+  return r;
+}
+
+//  /* specification for acceleration planning: at a distance min_dist,
+//   * the ego speed should equal the speed of the car ahead of the ego.
+//   * at a distance max_dist or more, ego may drive at its goal_speed.
+//   * in both situations, acceleration should be zero.
+//   */
+//  const double min_dist(6.*4.);  // 6 cars
+//  const double max_dist(3.*min_dist);
+
+//  int id_closest_old(-1);
+
+//  double start_speed(lenvec(v_start_speed));
+//  for (int i(1); i<=125-path_size; ++i)
+//  {
+//    double time((i-1+path_size)*0.02);
+
+//    // find the car in front of us and in our lane. Is there a record of such a car?
+//    double delta_s_closest(1.0/0.0); // distance to the next car
+//    int id_closest(-1); // id of the closest car
+//    Predictions::Prediction * pred(NULL);
+
+//    {
+//      std::pair<double, double> d_rl_boundaries(start_d-3., des_d+3.); // boundaries of lane dest_lane, including some safety distance
+//      for (auto p(predictions.preds.cbegin()); p!=predictions.preds.cend(); ++p)
+//      {
+//        Predictions::Prediction * predn_  = p->second;
+//        dvector pos(predn_->trajectory(time));
+//        dvector sd(m.getSmoothFrenet(pos));
+//        if (sd[1]>d_rl_boundaries.first & sd[1]<d_rl_boundaries.second)
+//          // yes, the car is on my lane! but is it the one that is next to me?
+//        {
+//          double delta_s(HighwayMap::distance_s(start_s, sd[0]));
+
+//          if (delta_s>0 & delta_s<delta_s_closest)
+//          {
+//            delta_s_closest=delta_s;
+//            id_closest=p->first;
+//            pred=predn_;
+//          }
+//        }
+//      }
+//    }
+
+//    double d;
+//    if (start_speed<0.01) // if the car is not moving
+//      d=start_d;
+//    else
+//      d=start_d+0.02*(des_d-start_d);
+
+//    double curvature(m.map_trajectory.curvature(start_s));
+//    double rescale(1.0/(1.0+curvature*d));
+
+//    double scale(1.);
+//    double des_speed(goal_speed); // desired speed
+//    // if there is a car in my lane, check the distance an compute a max speed
+//    if (id_closest>=0)
+//    {
+//      // predict position
+//      double pred_s(m.getSmoothFrenet(pred->trajectory(time))[0]);
+//      // distance
+//      double dist_s(m.distance_s(start_s,pred_s));
+//      /* specification for acceleration planning: at a distance min_dist,
+//       * the ego speed should equal the speed of the car ahead of the ego.
+//       * at a distance max_dist or more, ego may drive at its goal_speed.
+//       * In both situations, acceleration should be zero.
+//       * In between, the ego's speed should be interpolated "smoothly".
+//       */
+//      scale=((dist_s-min_dist)/(max_dist-min_dist));
+//      scale=(scale>1. ? 1. : scale); // 0<=scale<=1
+//      if (scale>=0)
+//        scale=1.-0.5*(1.+cos(M_PI*scale)); // still 0<=scale<=1, but S-shaped
+//      else
+//        scale=-scale*scale; // don't want dist_s to be smaller then min_dist!
+//      des_speed=scale*goal_speed + (1.-scale)*lenvec(pred->trajectory.tangent(time));
+//      des_speed = (des_speed<0. ? 0. : des_speed);
+//      if (i==1 | id_closest!=id_closest_old)
+//        std::cout<<id_closest<<"--------- Distance: "<<dist_s<<"m, "
+//                 <<"ego speed: "<<start_speed<<"m/s, "
+//                 <<"desired speed: "<<des_speed<<"m/s, "
+//                 <<"scale: "<<scale<<" ------------"<<std::endl;
+//    }
+
+//    double acceleration((des_speed-start_speed)/2.5
+//                        + (scale<0. ? 1000.*scale : 0.)); // dist<min_dist? then decellerate!
+//    const double max_acc(100./3.6/5.);
+//    acceleration = (acceleration>max_acc ? max_acc : acceleration);
+//    acceleration = (acceleration<-max_acc ? -max_acc : acceleration);
+
+//    double speed=start_speed+0.02*acceleration;
+//    speed = (speed>goal_speed ? goal_speed : speed);
+
+//    double s(start_s+(0.5*(start_speed+speed)*0.02)*rescale);
+//    while (s>=m.max_s) s-=m.max_s;
+
+//    dvector xy(m.getSmoothXY(s, d));
+
+//    r.next_x_vals.push_back(xy[0]);
+//    r.next_y_vals.push_back(xy[1]);
+
+//    start_s=s;
+//    start_d=d;
+//    start_speed=speed;
+//    // debugging
+//    id_closest_old=id_closest;
+//  }
+
+//  return r;
+//}
 

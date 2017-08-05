@@ -16,6 +16,7 @@ Response fe_even_more_smooth_rightmostlane(const Telemetry &t, const HighwayMap 
 Response fe_rightmostlane_constspeed(const Telemetry &t, const HighwayMap &m);
 Response fe_rightmostlane_constdist(const Telemetry &t, const HighwayMap &m, const Records &records, const Predictions::Predictions & predictions);
 Response fe_minjerk(const Telemetry &t, const HighwayMap &m, const Records &records, const Predictions::Predictions & predictions);
+Response fe_evenmore_minjerk_old(const Telemetry &t, const HighwayMap &m, const Records &records, const Predictions::Predictions & predictions);
 Response fe_evenmore_minjerk(const Telemetry &t, const HighwayMap &m, const Records &records, const Predictions::Predictions & predictions);
 
 #endif // FINGEREXERCISES_H
