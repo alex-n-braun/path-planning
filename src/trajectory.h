@@ -32,7 +32,6 @@ typedef std::pair<dvector, dvector> VecRange;
 class MinJerk {
 private:
   const HighwayMap & hwmap;
-  TimeRange time_span;
   VecRange s_range;
   VecRange d_range;
   int type;
@@ -45,6 +44,7 @@ private:
   static double eval(const dvector & coeff, double time);
   static dvector eval_full(const dvector & coeff, double time);
 public:
+  TimeRange time_span;
   MinJerk();
   /* compute a trajectory polynomial for s and d with fixed boundary conditions.
    * hwmap is needed to allow for transformation to xy.

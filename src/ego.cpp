@@ -1,5 +1,45 @@
 #include "ego.h"
 
+void Ego::generate_initial_trajectory(const Telemetry &t)
+{
+  // start state
+  double start_s, start_speed_s, start_accel_s,
+         start_d, start_speed_d, start_accel_d;
+  dvector start_sd({t.car_s, t.car_d});
+  start_s = start_sd[0];
+  start_d = start_sd[1];
+  dvector v_start_speed({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)});
+  // speed in tangential direction of lane
+  double start_speed_t = projectionlength(hwmap.tangent(start_s), v_start_speed);
+  double curvature(hwmap.map_trajectory.curvature(start_s));
+  double start_rescale(1.0/(1.0+curvature*start_d));
+  start_speed_s = start_speed_t * start_rescale;
+  // orthogonal component
+  start_speed_d = projectionlength(hwmap.orthogonal(start_s), v_start_speed);
+  // accelerations
+  start_accel_s=0.; start_accel_d=0.;
+
+  // destination lane (0: left lane, 1: middle, 2: right lane)
+  int dest_lane(0);
+  // destination (desired) d
+  double des_d(2.+4.+3.6*double(dest_lane-1));
+
+  // speed in s direction
+  // double goal_rescale(1.0/(1.0+curvature*des_d));
+  double goal_speed_s(goal_speed);
+
+
+  // jerk-minimizing trajectory with unspecified final s
+  std::cout<<"initial trajectory: start-s: "<<start_s<<std::endl;
+  Trajectory::TimeRange time_range(0., 5.5);
+  Trajectory::MinJerk * min_jerk = new Trajectory::MinJerk(time_range,
+                               Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
+                                        {goal_speed_s, 0., 0.}),
+                               Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
+                                        {des_d, 0., 0.}), hwmap, 1);
+  trajectories[time_range.first] = min_jerk;
+}
+
 Trajectory::MinJerk *Ego::find_trajectory(double time) const
 {
   if (trajectories.size()>0)
@@ -25,8 +65,6 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(Trajectory::MinJerk *tra
   dvector sdfull(trajectory->sd_full(time));
   double start_s, start_speed_s, start_accel_s,
          start_d, start_speed_d, start_accel_d;
-  // goal speed (49.5 Mph)
-  double goal_speed(49.5*1.609344/3.6);  // m/s
 
   // destination lane (0: left lane, 1: middle, 2: right lane)
   int dest_lane(0);
@@ -43,6 +81,19 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(Trajectory::MinJerk *tra
                                         {goal_d, 0., 0.}), hwmap, 1);
   trajectories[time_range.first] = new_trajectory;
   return new_trajectory;
+}
+
+void Ego::keep_trajectories(const std::set<Trajectory::MinJerk *> &keep)
+{
+  for (auto trajectory(trajectories.begin()); trajectory!=trajectories.end(); ++trajectory)
+  {
+    if (keep.count(trajectory->second)==0)
+    {
+      std::cout<<"delete trajectory ("<<trajectory->first<<", "<<trajectory->second->time_span.second<<")"<<std::endl;
+      delete trajectory->second;
+      trajectories.erase(trajectory);
+    }
+  }
 }
 
 Ego::Ego(const HighwayMap &hwmap_)
@@ -112,53 +163,13 @@ Response Ego::path(const Telemetry &t, const Records &records, const Predictions
     }
   }
 
-  if (trajectories.size()==0)  // initial trajectory
-  {
-    // start state
-    double start_s, start_speed_s, start_accel_s,
-           start_d, start_speed_d, start_accel_d;
-    dvector start_sd({t.car_s, t.car_d});
-    start_s = start_sd[0];
-    start_d = start_sd[1];
-    dvector v_start_speed({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)});
-    // speed in tangential direction of lane
-    double start_speed_t = projectionlength(hwmap.tangent(start_s), v_start_speed);
-    double curvature(hwmap.map_trajectory.curvature(start_s));
-    double start_rescale(1.0/(1.0+curvature*start_d));
-    start_speed_s = start_speed_t * start_rescale;
-    // orthogonal component
-    start_speed_d = projectionlength(hwmap.orthogonal(start_s), v_start_speed);
-    // accelerations
-    start_accel_s=0.; start_accel_d=0.;
-
-    // goal speed (49.5 Mph)
-    double goal_speed(49.5*1.609344/3.6);  // m/s
-
-    // destination lane (0: left lane, 1: middle, 2: right lane)
-    int dest_lane(0);
-    // destination (desired) d
-    double des_d(2.+4.+3.6*double(dest_lane-1));
-
-    // speed in s direction
-    // double goal_rescale(1.0/(1.0+curvature*des_d));
-    double goal_speed_s(goal_speed);
-
-
-    // jerk-minimizing trajectory with unspecified final s
-    std::cout<<"initial trajectory: start-s: "<<start_s<<std::endl;
-    Trajectory::TimeRange time_range(0., 5.5);
-    Trajectory::MinJerk * min_jerk = new Trajectory::MinJerk(time_range,
-                                 Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
-                                          {goal_speed_s, 0., 0.}),
-                                 Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                          {des_d, 0., 0.}), hwmap, 1);
-    trajectories[time_range.first] = min_jerk;
-  }
-
-
+  // initial trajectory
+  if (trajectories.empty()) generate_initial_trajectory(t);
 
   {
     Trajectory::MinJerk * trajectory;
+
+    std::set<Trajectory::MinJerk*> used_trajectories;
 
     for (int i(1); i<=max_path_size-path_size; ++i)
     {
@@ -169,12 +180,16 @@ Response Ego::path(const Telemetry &t, const Records &records, const Predictions
         next_trajectory = generate_successor_trajectory(trajectory, time-dt);
       }
       trajectory=next_trajectory;
+      used_trajectories.insert(trajectory);
       dvector xy((*trajectory)(time));
       r.next_x_vals.push_back(xy[0]);
       r.next_y_vals.push_back(xy[1]);
 
       storage.push_back(Point(time, xy, trajectory));
     }
+
+    // keep all trajectories on the list that are still in use and remove all the others
+    keep_trajectories(used_trajectories);
   }
 
   return r;
