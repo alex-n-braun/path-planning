@@ -1,22 +1,72 @@
 #include "ego.h"
 
-Ego::Ego()
-  : min_jerk(NULL), init(0)
+Trajectory::MinJerk *Ego::find_trajectory(double time) const
+{
+  if (trajectories.size()>0)
+  {
+    auto t(trajectories.lower_bound(time));
+    t--;
+    if (t->second->is_time_in_range(time))
+      return t->second;
+    else
+      return NULL;
+
+//    if (min_jerk->is_time_in_range(time))
+//      return min_jerk;
+//    else
+//      return NULL;
+  }
+  else
+    return NULL;
+}
+
+Trajectory::MinJerk *Ego::generate_successor_trajectory(Trajectory::MinJerk *trajectory, double time)
+{
+  dvector sdfull(trajectory->sd_full(time));
+  double start_s, start_speed_s, start_accel_s,
+         start_d, start_speed_d, start_accel_d;
+  // goal speed (49.5 Mph)
+  double goal_speed(49.5*1.609344/3.6);  // m/s
+
+  // destination lane (0: left lane, 1: middle, 2: right lane)
+  int dest_lane(0);
+  // destination (desired) d
+  double goal_d(2.+4.+3.6*double(dest_lane-1));
+  start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
+  std::cout<<"generate_successor_trajectory(): successor start_s: "<<start_s<<""<<std::endl;
+  start_d = sdfull[3]; start_speed_d = sdfull[4]; start_accel_d = sdfull[5];
+  Trajectory::TimeRange time_range(time+0., time+2.5);
+  Trajectory::MinJerk * new_trajectory = new Trajectory::MinJerk(time_range,
+                               Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
+                                        {goal_speed, 0., 0.}),
+                               Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
+                                        {goal_d, 0., 0.}), hwmap, 1);
+  trajectories[time_range.first] = new_trajectory;
+  return new_trajectory;
+}
+
+Ego::Ego(const HighwayMap &hwmap_)
+  : hwmap(hwmap_), base_time(0.)
 {
   re_init();
 }
 
 Ego::~Ego()
 {
-  delete min_jerk;
+  for (auto t(trajectories.cbegin()); t!=trajectories.cend(); ++t)
+    delete t->second;
 }
 
 void Ego::re_init()
 {
-  init=1;
+  base_time=0.;
+  for (auto t(trajectories.cbegin()); t!=trajectories.cend(); ++t)
+    delete t->second;
+  trajectories.clear();
+  storage.clear();
 }
 
-Response Ego::path(const Telemetry &t, const HighwayMap &m, const Records &records, const Predictions::Predictions &predictions)
+Response Ego::path(const Telemetry &t, const Records &records, const Predictions::Predictions &predictions)
 {
   Response r;
 
@@ -29,89 +79,114 @@ Response Ego::path(const Telemetry &t, const HighwayMap &m, const Records &recor
 
   int path_size = t.previous_path_x.size();
   int keep_steps(25); // (init==0 ? 50 : 0);
-  int max_path_size(200); //(init==0 | path_size==0 ? 200 : path_size);
+  int max_path_size(270); //(init==0 | path_size==0 ? 200 : path_size);
 
   int consumed_steps(max_path_size-path_size);
-  std::cout<<init<<": "<<consumed_steps<<", "<<path_size<<std::endl;
+  if (path_size==0)
+    base_time = 0;
+  else
+    base_time += double(consumed_steps)*dt;
+//  std::cout<<"consumed_steps: "<<consumed_steps<<", "<<path_size<<", "
+//           <<"base time: "<<base_time<<"s, "
+//           <<"storage size: "<<storage.size()<<std::endl;
 
   path_size = (path_size > keep_steps ? keep_steps : path_size);
   keep_steps = path_size;
 
-  for(int i = 0; i < path_size; i++)
+  if (storage.size()>0)
   {
-      r.next_x_vals.push_back(t.previous_path_x[i]);
-      r.next_y_vals.push_back(t.previous_path_y[i]);
+    storage.erase(storage.begin(), storage.begin()+consumed_steps);
+    storage.erase(storage.begin()+path_size, storage.end());
+    auto s(storage.begin());
+//    std::cout<<"1st Storage element: ("<<s->xy[0]<<", "<<s->xy[1]<<") == "
+//             <<"1st old element: ("<<t.previous_path_x[0]<<", "<<t.previous_path_y[0]<<") ???"
+//             <<std::endl;
+//    s=storage.end(); s--;
+//    std::cout<<"last Storage element: ("<<s->xy[0]<<", "<<s->xy[1]<<") == "
+//             <<"last old element: ("<<t.previous_path_x[path_size-1]<<", "<<t.previous_path_y[path_size-1]<<") ???"
+//             <<std::endl;
+    for (auto p(storage.cbegin()); p!=storage.cend(); ++p)
+    {
+      r.next_x_vals.push_back(p->xy[0]);
+      r.next_y_vals.push_back(p->xy[1]);
+    }
   }
 
-  // start state
-  double start_s, start_speed_s, start_accel_s,
-         start_d, start_speed_d, start_accel_d;
-  if (init>0)
+  if (trajectories.size()==0)  // initial trajectory
   {
+    // start state
+    double start_s, start_speed_s, start_accel_s,
+           start_d, start_speed_d, start_accel_d;
     dvector start_sd({t.car_s, t.car_d});
     start_s = start_sd[0];
     start_d = start_sd[1];
     dvector v_start_speed({t.car_speed*cos(t.car_yaw), t.car_speed*sin(t.car_yaw)});
     // speed in tangential direction of lane
-    double start_speed_t = projectionlength(m.tangent(start_s), v_start_speed);
-    double curvature(m.map_trajectory.curvature(start_s));
+    double start_speed_t = projectionlength(hwmap.tangent(start_s), v_start_speed);
+    double curvature(hwmap.map_trajectory.curvature(start_s));
     double start_rescale(1.0/(1.0+curvature*start_d));
     start_speed_s = start_speed_t * start_rescale;
     // orthogonal component
-    start_speed_d = projectionlength(m.orthogonal(start_s), v_start_speed);
+    start_speed_d = projectionlength(hwmap.orthogonal(start_s), v_start_speed);
     // accelerations
-    start_speed_s=0; start_speed_d=0;
-    start_accel_s = 0.;
-    start_accel_d = 0.;
-  }
-  else
-  {
-    dvector sdfull(min_jerk->sd_full(double(consumed_steps)*dt));
-    start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
-//    std::cout<<"--------"<<start_s<<"---------"<<std::endl;
-    start_d = sdfull[3]; start_speed_d = sdfull[4]; start_accel_d = sdfull[5];
-  }
+    start_accel_s=0.; start_accel_d=0.;
+
+    // goal speed (49.5 Mph)
+    double goal_speed(49.5*1.609344/3.6);  // m/s
+
+    // destination lane (0: left lane, 1: middle, 2: right lane)
+    int dest_lane(0);
+    // destination (desired) d
+    double des_d(2.+4.+3.6*double(dest_lane-1));
+
+    // speed in s direction
+    // double goal_rescale(1.0/(1.0+curvature*des_d));
+    double goal_speed_s(goal_speed);
 
 
-  // goal speed (49.5 Mph)
-  double goal_speed(49.5*1.609344/3.6);  // m/s
-
-  // destination lane (0: left lane, 1: middle, 2: right lane)
-  int dest_lane(0);
-  // destination (desired) d
-  double des_d(2.+4.+3.6*double(dest_lane-1));
-
-  // speed in s direction
-  // double goal_rescale(1.0/(1.0+curvature*des_d));
-  double goal_speed_s(goal_speed);
-
-//  if (init>3)
-//  {
-//    des_d=start_d;
-//    goal_speed_s=0;
-//  }
-
-  // jerk-minimizing trajectory with unspecified final s
-//  if (path_size==0 | init==0)
-  {
-    delete min_jerk;
-    min_jerk = new Trajectory::MinJerk(Trajectory::TimeRange(0., 4.5),
+    // jerk-minimizing trajectory with unspecified final s
+    std::cout<<"initial trajectory: start-s: "<<start_s<<std::endl;
+    Trajectory::TimeRange time_range(0., 5.5);
+    Trajectory::MinJerk * min_jerk = new Trajectory::MinJerk(time_range,
                                  Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
                                           {goal_speed_s, 0., 0.}),
                                  Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                          {des_d, 0., 0.}), m, 1);
+                                          {des_d, 0., 0.}), hwmap, 1);
+    trajectories[time_range.first] = min_jerk;
   }
 
-  for (int i(1); i<=max_path_size-path_size; ++i)
+
+
   {
-    double delta_time(double(i)*dt);
-    dvector xy((*min_jerk)(delta_time));
-    r.next_x_vals.push_back(xy[0]);
-    r.next_y_vals.push_back(xy[1]);
-  }
+    Trajectory::MinJerk * trajectory;
 
-  init--; init = (init<0 ? 0 : init);
+    for (int i(1); i<=max_path_size-path_size; ++i)
+    {
+      double time(base_time+double(path_size)*dt+double(i)*dt);
+      Trajectory::MinJerk * next_trajectory = find_trajectory(time);
+      if (next_trajectory==NULL) // there is no trajectory containing the time in its range
+      {
+        next_trajectory = generate_successor_trajectory(trajectory, time-dt);
+      }
+      trajectory=next_trajectory;
+      dvector xy((*trajectory)(time));
+      r.next_x_vals.push_back(xy[0]);
+      r.next_y_vals.push_back(xy[1]);
+
+      storage.push_back(Point(time, xy, trajectory));
+    }
+  }
 
   return r;
 }
 
+
+Ego::Point::Point(double time_, const dvector &xy_, Trajectory::MinJerk *t)
+  : time(time_), xy(xy_), min_jerk(t)
+{
+
+}
+
+Ego::Point::~Point()
+{
+}

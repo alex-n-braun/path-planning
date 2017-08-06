@@ -38,6 +38,7 @@ private:
   int type;
   dvector s_coeff;
   dvector d_coeff;
+//  tk::spline spline_time_s;
   static void solve(dvector & coeff, const Eigen::MatrixXd & A, const Eigen::MatrixXd & v);
   static void solve0(dvector & coeff, const TimeRange & time_span, const VecRange & range);
   static void solve1(dvector & coeff, const TimeRange & time_span, const VecRange & range);
@@ -60,6 +61,12 @@ public:
   /* compute up to 2nd derivative of s and d and store in the following way: (s, s', s'', d, d', d'')
    */
   dvector sd_full(double time) const;
+  /* compute time at which we are at s
+   */
+  double time(double s) const;
+  /* is time in range?
+   */
+  bool is_time_in_range(double time) const;
 };
 
 }

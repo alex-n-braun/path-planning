@@ -52,7 +52,7 @@ int main() {
   Records records(250. /* range in m */);
 
   // ego object
-  Ego ego;
+  Ego ego(highway_map);
 
   h.onMessage([&ego, &highway_map, &records, start_time, &old_time_stamp]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
@@ -81,9 +81,9 @@ int main() {
             double time_stamp(double(millis)*1e-3); // time stamp in seconds
           
             Telemetry telemetry(j[1]);
-            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
-                    <<", s: "<<telemetry.car_s
-                    <<std::endl;
+//            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
+//                    <<", s: "<<telemetry.car_s
+//                    <<std::endl;
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -118,13 +118,14 @@ int main() {
 //            }
 //            /* end of finger exercises */
 
-            if (time_stamp>1.)
+            if (time_stamp>-1.)
             {
-              r = ego.path(telemetry, highway_map, records, predictions);
+              r = ego.path(telemetry, records, predictions);
             }
             else
             {
               dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-400., 2.+4.+3.5);
+              std::cout<<"start-s: "<<HighwayMap::max_s-1000.<<" == "<<highway_map.getSmoothFrenet(xy)[0]<<std::endl;
               double x(xy[0]);
               double y(xy[1]);
               r.next_x_vals={x, x, x, x, x};
