@@ -38,7 +38,7 @@ private:
   int type;
   dvector s_coeff;
   dvector d_coeff;
-//  tk::spline spline_time_s;
+
   static void solve(dvector & coeff, const Eigen::MatrixXd & A, const Eigen::MatrixXd & v);
   static void solve0(dvector & coeff, const TimeRange & time_span, const VecRange & range);
   static void solve1(dvector & coeff, const TimeRange & time_span, const VecRange & range);
@@ -60,6 +60,7 @@ public:
    *       a final s?)
    */
   MinJerk(const TimeRange & time_span_, const VecRange & s_range_, const VecRange & d_range_, const HighwayMap & hwmap_, int type_);
+  ~MinJerk();
   double s(double time) const;
   double d(double time) const;
   dvector sd(double time) const;

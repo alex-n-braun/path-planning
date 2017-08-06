@@ -228,18 +228,11 @@ MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const Ve
   // generate values
   generate();
 
-  //  // generate time(s) spline
-  //  const int intervals(15);
-  //  dvector s_(intervals+1);
-  //  dvector t_(intervals+1);
-  //  double delta_time_((time_span_.second-time_span_.first)/double(intervals));
-  //  for (int i(0); i<=intervals; ++i)
-  //  {
-  //    double time_(time_span_.first+double(i)*delta_time_);
-  //    t_[i]=time_;
-  //    s_[i]=s(time_);
-  //  }
-  //  spline_time_s.set_points(s_, t_);
+}
+
+MinJerk::~MinJerk()
+{
+  std::cout<<"delete trajectory ("<<time_span.first<<", "<<time_span.second<<")"<<std::endl;
 }
 
 double MinJerk::s(double time) const
@@ -276,11 +269,6 @@ dvector MinJerk::sd_full(double time) const
   dvector result(6); for (int i(0); i<3; ++i) { result[i]=data[i+2][index]; result[i+3]=data[i+5][index]; }
   return result;
 }
-
-//double MinJerk::time(double s) const
-//{
-//  return spline_time_s(s);
-//}
 
 bool MinJerk::is_time_in_range(double time) const
 {

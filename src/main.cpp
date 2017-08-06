@@ -79,11 +79,11 @@ int main() {
             auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 
             double time_stamp(double(millis)*1e-3); // time stamp in seconds
-          
+//            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
+//                    <<", s: "<<telemetry.car_s
+//                    <<std::endl;
+
             Telemetry telemetry(j[1]);
-            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
-                    <<", s: "<<telemetry.car_s
-                    <<std::endl;
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -94,9 +94,10 @@ int main() {
             Predictions::Predictions predictions(records, highway_map, 1.0, 12);
 
             Response r;
+
+            if (time_stamp>-1.)
+            {
 //            /* finger exercises */
-//            if (time_stamp>-1.)
-//            {
 //            //  r=fe_constspeed(telemetry);
 //            //  r=fe_circle(telemetry);
 //            //  r=fe_waypoints(telemetry, highway_map);
@@ -107,29 +108,17 @@ int main() {
 //            //  r=fe_rightmostlane_constdist(telemetry, highway_map, records, predictions);
 //            //  r=fe_minjerk(telemetry, highway_map, records, predictions);
 //              r=fe_evenmore_minjerk(telemetry, highway_map, records, predictions);
-//            }
-//            else
-//            {
-//              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-200., 2.+4.+3.5);
-//              double x(xy[0]);
-//              double y(xy[1]);
-//              r.next_x_vals={x, x, x, x, x};
-//              r.next_y_vals={y, y, y, y, y};
-//            }
 //            /* end of finger exercises */
-
-            if (time_stamp>1.)
-            {
-              r = ego.path(telemetry, records, predictions);
+              r = ego.path(telemetry, predictions);
             }
-            else
+            else if (time_stamp<0.5)
             {
-              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-400., 2.+4.+3.5);
-              std::cout<<"start-s: "<<HighwayMap::max_s-1000.<<" == "<<highway_map.getSmoothFrenet(xy)[0]<<std::endl;
+              dvector xy=highway_map.getSmoothXY(HighwayMap::max_s-200., 2.+4.+3.5);
+              std::cout<<"start-s: "<<HighwayMap::max_s-200.<<" == "<<highway_map.getSmoothFrenet(xy)[0]<<std::endl;
               double x(xy[0]);
               double y(xy[1]);
-              r.next_x_vals={x, x, x, x, x};
-              r.next_y_vals={y, y, y, y, y};
+              r.next_x_vals={x, x, x, x};
+              r.next_y_vals={y, y, y, y};
             }
 
 
