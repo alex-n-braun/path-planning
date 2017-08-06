@@ -2,6 +2,7 @@
 #define TRAJECTORY_H
 
 #include <vector>
+#include <map>
 #include "spline.h"
 #include "helpers.h"
 #include "Eigen-3.3/Eigen/Core"
@@ -43,6 +44,11 @@ private:
   static void solve1(dvector & coeff, const TimeRange & time_span, const VecRange & range);
   static double eval(const dvector & coeff, double time);
   static dvector eval_full(const dvector & coeff, double time);
+  // data storage
+  std::vector<dvector> data;
+  dvector sd_full_calc(double time) const;
+  void generate();
+  int index_time(double time) const;
 public:
   TimeRange time_span;
   MinJerk();

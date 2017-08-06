@@ -69,9 +69,10 @@ double Spline::curvature(double time) const // see definition of curvature on wi
   return det/(len*len*len);
 }
 
-/* MinJerk Trajectory
+/**************************************************
+ * MinJerk Trajectory
  * jerk minimizing polynomials for s and d
- */
+ **************************************************/
 
 void MinJerk::solve(dvector &coeff, const Eigen::MatrixXd &A, const Eigen::MatrixXd &v)
 {
@@ -138,8 +139,63 @@ dvector MinJerk::eval_full(const dvector &coeff, double time)
   return result;
 }
 
+
+dvector MinJerk::sd_full_calc(double time) const
+{
+  dvector sfull(MinJerk::eval_full(s_coeff, time-time_span.first));
+  dvector dfull(MinJerk::eval_full(d_coeff, time-time_span.first));
+  dvector result(6); for (int i(0); i<3; ++i) { result[i]=sfull[i]; result[i+3]=dfull[i]; }
+  return result;
+}
+
+void MinJerk::generate()
+{
+  double time_param(time_span.first);
+  double time(time_param);
+  const double dt(0.02);
+
+  double curvature;
+
+  {
+    dvector data_el(sd_full_calc(time_param));
+    data[0].push_back(time);
+    data[1].push_back(time_param);
+    for (int i(0); i<6; ++i) data[i+2].push_back(data_el[i]);
+
+    curvature = hwmap.curvature(data_el[0]);
+    double rescale(1.0/(1.0+curvature*data[5].back()));
+
+    time_param += dt*rescale;
+    time += dt;
+  }
+
+  while (time<=time_span.second+0.25*dt)
+  {
+    dvector data_el(sd_full_calc(time_param));
+    data[0].push_back(time);
+    data[1].push_back(time_param);
+
+    double delta_s(data_el[0]-data[2].back());
+    double rescale(1.0/(1.0+curvature*data[5].back()));
+    rescale *= (data_el[1]*rescale)/lenvec({data_el[1]*rescale, data_el[4]});
+
+    for (int i(0); i<6; ++i) data[i+2].push_back(data_el[i]);
+
+    curvature = hwmap.curvature(data_el[0]);
+
+    time_param += dt*rescale;
+    time += dt;
+  }
+}
+
+int MinJerk::index_time(double time) const
+{
+  const double dt(0.02);
+  return (time+0.25*dt-time_span.first)/(time_span.second-time_span.first) * (data[0].size()-1);
+}
+
 MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const VecRange &d_range_, const HighwayMap &hwmap_, int type_)
-  : hwmap(hwmap_), time_span(time_span_), s_range(s_range_), d_range(d_range_), type(type_), s_coeff(6), d_coeff(6)
+  : hwmap(hwmap_), time_span(time_span_), s_range(s_range_), d_range(d_range_), type(type_), s_coeff(6), d_coeff(6), data(8)
 {
   // initial conditions fix first three coefficients
   s_coeff[0] = HighwayMap::range_s(s_range_.first[0]);
@@ -169,23 +225,27 @@ MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const Ve
     throw -1;
   }
 
-//  // generate time(s) spline
-//  const int intervals(15);
-//  dvector s_(intervals+1);
-//  dvector t_(intervals+1);
-//  double delta_time_((time_span_.second-time_span_.first)/double(intervals));
-//  for (int i(0); i<=intervals; ++i)
-//  {
-//    double time_(time_span_.first+double(i)*delta_time_);
-//    t_[i]=time_;
-//    s_[i]=s(time_);
-//  }
-//  spline_time_s.set_points(s_, t_);
+  // generate values
+  generate();
+
+  //  // generate time(s) spline
+  //  const int intervals(15);
+  //  dvector s_(intervals+1);
+  //  dvector t_(intervals+1);
+  //  double delta_time_((time_span_.second-time_span_.first)/double(intervals));
+  //  for (int i(0); i<=intervals; ++i)
+  //  {
+  //    double time_(time_span_.first+double(i)*delta_time_);
+  //    t_[i]=time_;
+  //    s_[i]=s(time_);
+  //  }
+  //  spline_time_s.set_points(s_, t_);
 }
 
 double MinJerk::s(double time) const
 {
-  double s = MinJerk::eval(s_coeff, time-time_span.first);
+//  double s = MinJerk::eval(s_coeff, time-time_span.first);
+  double s = data[2][index_time(time)];
   if (s>HighwayMap::max_s) s-=HighwayMap::max_s;
   if (s<0) s+=HighwayMap::max_s;
   return s;
@@ -193,7 +253,8 @@ double MinJerk::s(double time) const
 
 double MinJerk::d(double time) const
 {
-  return MinJerk::eval(d_coeff, time-time_span.first);
+//  return MinJerk::eval(d_coeff, time-time_span.first);
+  return data[5][index_time(time)];
 }
 
 dvector MinJerk::sd(double time) const
@@ -208,9 +269,11 @@ dvector MinJerk::operator()(double time) const
 
 dvector MinJerk::sd_full(double time) const
 {
-  dvector sfull(MinJerk::eval_full(s_coeff, time-time_span.first));
-  dvector dfull(MinJerk::eval_full(d_coeff, time-time_span.first));
-  dvector result(6); for (int i(0); i<3; ++i) { result[i]=sfull[i]; result[i+3]=dfull[i]; }
+//  dvector sfull(MinJerk::eval_full(s_coeff, time-time_span.first));
+//  dvector dfull(MinJerk::eval_full(d_coeff, time-time_span.first));
+//  dvector result(6); for (int i(0); i<3; ++i) { result[i]=sfull[i]; result[i+3]=dfull[i]; }
+  int index(index_time(time));
+  dvector result(6); for (int i(0); i<3; ++i) { result[i]=data[i+2][index]; result[i+3]=data[i+5][index]; }
   return result;
 }
 

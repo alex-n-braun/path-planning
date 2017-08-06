@@ -67,7 +67,7 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(Trajectory::MinJerk *tra
          start_d, start_speed_d, start_accel_d;
 
   // destination lane (0: left lane, 1: middle, 2: right lane)
-  int dest_lane(0);
+  int dest_lane(2);
   // destination (desired) d
   double goal_d(2.+4.+3.6*double(dest_lane-1));
   start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
@@ -130,7 +130,7 @@ Response Ego::path(const Telemetry &t, const Records &records, const Predictions
 
   int path_size = t.previous_path_x.size();
   int keep_steps(25); // (init==0 ? 50 : 0);
-  int max_path_size(270); //(init==0 | path_size==0 ? 200 : path_size);
+  int max_path_size(70); //(init==0 | path_size==0 ? 200 : path_size);
 
   int consumed_steps(max_path_size-path_size);
   if (path_size==0)
