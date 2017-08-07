@@ -20,14 +20,16 @@ private:
   public:
     double time;
     dvector xy;
+    dvector sd;
     StateMachine state;
     Trajectory::MinJerk * trajectory;
-    Point(double time_, const StateMachine & state_, const dvector & xy_, Trajectory::MinJerk * t);
+    Point(double time_, const StateMachine & state_, const dvector & xy_, const dvector & sd_, Trajectory::MinJerk * t);
     ~Point();
   };
 
   double base_time;
   double desired_speed;
+  double desired_d;
   double dt;
 
   const HighwayMap & hwmap;

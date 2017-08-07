@@ -6,7 +6,30 @@ const double Ego::max_dist(3.*min_dist);
 
 bool Ego::check_keep_conditions(const Ego::Point &p, const Predictions::Predictions &predictions) const
 {
-  return false;
+  bool keep(true);
+
+  /* find the car in front of us and in our lane, that is too
+   * close. Is there a record of such a car? Then the keep-conditions
+   * are not fulfilled.
+   */
+  double start_s(p.sd[0]);
+  double start_d(p.sd[1]);
+  double des_d(desired_d);
+  std::pair<double, double> d_rl_boundaries(start_d-3., des_d+3.); // boundaries of lane dest_lane, including some safety distance
+  for (auto predn_(predictions.preds.cbegin()); keep & predn_!=predictions.preds.cend(); ++predn_)
+  {
+    Predictions::Prediction * predn  = predn_->second;
+    dvector pos(predn->trajectory(p.time-base_time));
+    dvector sd(hwmap.getSmoothFrenet(pos));
+    if (sd[1]>d_rl_boundaries.first & sd[1]<d_rl_boundaries.second)
+      // yes, the car is on my lane!
+    {
+      double delta_s(HighwayMap::distance_s(start_s, sd[0]));
+      keep = !(delta_s>0. & delta_s<Ego::max_dist);
+    }
+  }
+
+  return keep;
 }
 
 void Ego::generate_initial_trajectory(const Telemetry &t)
@@ -33,6 +56,7 @@ void Ego::generate_initial_trajectory(const Telemetry &t)
   int dest_lane(t.car_d/4.);
   // destination (desired) d
   double des_d(2.+4.+3.6*double(dest_lane-1));
+  desired_d = des_d;
 
   // speed in s direction
   // double goal_rescale(1.0/(1.0+curvature*des_d));
@@ -84,12 +108,6 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & sta
     double start_s, start_speed_s, start_accel_s,
            start_d, start_speed_d, start_accel_d;
 
-    // lane following with maximum speed
-    int dest_lane(trajectory->d(time)/4.);
-
-    // destination (desired) d
-    double goal_d(2.+4.+3.6*double(dest_lane-1));
-
     start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
     std::cout<<"generate_successor_trajectory(): successor start_s: "<<start_s<<""<<std::endl;
     start_d = sdfull[3]; start_speed_d = sdfull[4]; start_accel_d = sdfull[5];
@@ -98,7 +116,7 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & sta
                                  Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
                                           {goal_speed, 0., 0.}),
                                  Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                          {goal_d, 0., 0.}), hwmap, 1, dt);
+                                          {desired_d, 0., 0.}), hwmap, 1, dt);
     trajectories[time_range.first] = new_trajectory;
 
     return new_trajectory;
@@ -195,13 +213,16 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
     if (p!=storage.end())
       storage.erase(p, storage.end());
     state = storage.back().state;
+
+    if (keep_steps<path_size-1)
+      std::cout<<"kept storage points: "<<keep_steps<<" < "<<path_size<<std::endl;
   }
   else
     state = StateMachine();
 
-  std::cout<<"consumed_steps: "<<consumed_steps<<", "<<path_size<<", "
-           <<"base time: "<<base_time<<"s, "
-           <<"storage size: "<<storage.size()<<std::endl;
+//  std::cout<<"consumed_steps: "<<consumed_steps<<", "<<path_size<<", "
+//           <<"base time: "<<base_time<<"s, "
+//           <<"storage size: "<<storage.size()<<std::endl;
 
   // initial trajectory
   if (trajectories.empty()) generate_initial_trajectory(t);
@@ -224,11 +245,13 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
       trajectory=next_trajectory;
       used_trajectories.insert(trajectory);
 
-      dvector xy((*trajectory)(time));
+      dvector sd(trajectory->sd(time));
+//      dvector xy((*trajectory)(time));
+      dvector xy(hwmap.getSmoothXY(sd));
       r.next_x_vals.push_back(xy[0]);
       r.next_y_vals.push_back(xy[1]);
 
-      storage.push_back(Point(time, state, xy, trajectory));
+      storage.push_back(Point(time, state, xy, sd, trajectory));
     }
 
     // keep all trajectories on the list that are still in use and remove all the others
@@ -239,8 +262,8 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 }
 
 
-Ego::Point::Point(double time_, const StateMachine &state_, const dvector &xy_, Trajectory::MinJerk *t)
-  : time(time_), xy(xy_), trajectory(t), state(state_)
+Ego::Point::Point(double time_, const StateMachine &state_, const dvector &xy_, const dvector &sd_, Trajectory::MinJerk *t)
+  : time(time_), xy(xy_), sd(sd_), trajectory(t), state(state_)
 {
 
 }
