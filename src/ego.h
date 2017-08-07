@@ -10,25 +10,31 @@
 
 class Ego
 {
+public:
+  // goal speed (49.5 Mph)
+  static const double goal_speed;  // m/s
+  static const double min_dist;    // m
+  static const double max_dist;    // m
 private:
   class Point {
   public:
     double time;
     dvector xy;
     StateMachine state;
-    Trajectory::MinJerk * min_jerk;
+    Trajectory::MinJerk * trajectory;
     Point(double time_, const StateMachine & state_, const dvector & xy_, Trajectory::MinJerk * t);
     ~Point();
   };
 
   double base_time;
-  // goal speed (49.5 Mph)
-  const double goal_speed  = 49.25*1.609344/3.6;  // m/s
+
 
   const HighwayMap & hwmap;
 
   std::map<double, Trajectory::MinJerk *> trajectories; // key: left end of the time range
   std::vector<Point> storage;
+  // for a point p in the storage, check if it can be kept according to the predictions
+  bool check_keep_conditions(const Point & p, const Predictions::Predictions &predictions) const;
 
   void generate_initial_trajectory(const Telemetry &t);
   Trajectory::MinJerk *find_trajectory(double time) const;

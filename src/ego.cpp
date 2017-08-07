@@ -1,5 +1,14 @@
 #include "ego.h"
 
+const double Ego::goal_speed  = 49.25*1.609344/3.6;  // m/s
+const double Ego::min_dist(6.*4.);  // 6 cars
+const double Ego::max_dist(3.*min_dist);
+
+bool Ego::check_keep_conditions(const Ego::Point &p, const Predictions::Predictions &predictions) const
+{
+  return true;
+}
+
 void Ego::generate_initial_trajectory(const Telemetry &t)
 {
   // start state
@@ -69,29 +78,31 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & sta
 
   switch (state.state)
   {
-    case StateMachine::maxspeed:
-      dvector sdfull(trajectory->sd_full(time));
-      double start_s, start_speed_s, start_accel_s,
-             start_d, start_speed_d, start_accel_d;
+  case StateMachine::lanefollow:
+  {
+    dvector sdfull(trajectory->sd_full(time));
+    double start_s, start_speed_s, start_accel_s,
+           start_d, start_speed_d, start_accel_d;
 
-      // lane following with maximum speed
-      int dest_lane(trajectory->d(time)/4.);
+    // lane following with maximum speed
+    int dest_lane(trajectory->d(time)/4.);
 
-      // destination (desired) d
-      double goal_d(2.+4.+3.6*double(dest_lane-1));
+    // destination (desired) d
+    double goal_d(2.+4.+3.6*double(dest_lane-1));
 
-      start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
-      std::cout<<"generate_successor_trajectory(): successor start_s: "<<start_s<<""<<std::endl;
-      start_d = sdfull[3]; start_speed_d = sdfull[4]; start_accel_d = sdfull[5];
-      Trajectory::TimeRange time_range(time+0., time+2.5);
-      Trajectory::MinJerk * new_trajectory = new Trajectory::MinJerk(time_range,
-                                   Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
-                                            {goal_speed, 0., 0.}),
-                                   Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                            {goal_d, 0., 0.}), hwmap, 1);
-      trajectories[time_range.first] = new_trajectory;
+    start_s = sdfull[0]; start_speed_s = sdfull[1]; start_accel_s = sdfull[2];
+    std::cout<<"generate_successor_trajectory(): successor start_s: "<<start_s<<""<<std::endl;
+    start_d = sdfull[3]; start_speed_d = sdfull[4]; start_accel_d = sdfull[5];
+    Trajectory::TimeRange time_range(time+0., time+2.5);
+    Trajectory::MinJerk * new_trajectory = new Trajectory::MinJerk(time_range,
+                                 Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
+                                          {goal_speed, 0., 0.}),
+                                 Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
+                                          {goal_d, 0., 0.}), hwmap, 1);
+    trajectories[time_range.first] = new_trajectory;
 
-      return new_trajectory;
+    return new_trajectory;
+  }
   }
 }
 
@@ -140,7 +151,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
    */
 
   int path_size = t.previous_path_x.size();
-  int keep_steps(25); // (init==0 ? 50 : 0);
+  const int min_keep_steps(10);
   int max_path_size(370); //(init==0 | path_size==0 ? 200 : path_size);
 
   int consumed_steps(max_path_size-path_size);
@@ -148,19 +159,17 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
     base_time = 0;
   else
     base_time += double(consumed_steps)*dt;
-//  std::cout<<"consumed_steps: "<<consumed_steps<<", "<<path_size<<", "
-//           <<"base time: "<<base_time<<"s, "
-//           <<"storage size: "<<storage.size()<<std::endl;
 
-  path_size = (path_size > keep_steps ? keep_steps : path_size);
-  keep_steps = path_size;
+  std::set<Trajectory::MinJerk*> used_trajectories;
+
+  //  path_size = (path_size > keep_steps ? keep_steps : path_size);
+  int keep_steps(0);
 
   StateMachine state;
   if (storage.size()>0)
   {
     storage.erase(storage.begin(), storage.begin()+consumed_steps);
-    storage.erase(storage.begin()+path_size, storage.end());
-    auto s(storage.begin());
+//    auto s(storage.begin());
 //    std::cout<<"1st Storage element: ("<<s->xy[0]<<", "<<s->xy[1]<<") == "
 //             <<"1st old element: ("<<t.previous_path_x[0]<<", "<<t.previous_path_y[0]<<") ???"
 //             <<std::endl;
@@ -168,29 +177,45 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 //    std::cout<<"last Storage element: ("<<s->xy[0]<<", "<<s->xy[1]<<") == "
 //             <<"last old element: ("<<t.previous_path_x[path_size-1]<<", "<<t.previous_path_y[path_size-1]<<") ???"
 //             <<std::endl;
-    for (auto p(storage.cbegin()); p!=storage.cend(); ++p)
+
+    auto p(storage.begin());
+    for (; (p!=storage.end() ? check_keep_conditions(*p, predictions) : false) & keep_steps<path_size-1; ++p)
+      /* HINT: there is a problem with the storage when the
+       * complete history is used; therefore at least one
+       * element at the end of the storage is removed
+       * (keep_steps<path_size-1). With that work-around, it
+       * works. Still need to figure out what is exactly the
+       * problem.
+       */
     {
       r.next_x_vals.push_back(p->xy[0]);
       r.next_y_vals.push_back(p->xy[1]);
+      used_trajectories.insert(p->trajectory);
+      keep_steps++;
     }
+
+    if (p!=storage.end())
+      storage.erase(p, storage.end());
     state = storage.back().state;
   }
   else
     state = StateMachine();
 
+  std::cout<<"consumed_steps: "<<consumed_steps<<", "<<path_size<<", "
+           <<"base time: "<<base_time<<"s, "
+           <<"storage size: "<<storage.size()<<std::endl;
+
   // initial trajectory
   if (trajectories.empty()) generate_initial_trajectory(t);
 
   {
-    Trajectory::MinJerk * trajectory;
+    Trajectory::MinJerk * trajectory(NULL);
 
-    std::set<Trajectory::MinJerk*> used_trajectories;
-
-    for (int i(1); i<=max_path_size-path_size; ++i)
+    for (int i(1); i<=max_path_size-keep_steps; ++i)
     {
-      double time(base_time+double(path_size)*dt+double(i)*dt);
+      double time(base_time+double(keep_steps)*dt+double(i)*dt);
       Trajectory::MinJerk * next_trajectory = find_trajectory(time);
-      if (next_trajectory==NULL | state.transition(trajectory, predictions, time))
+      if (next_trajectory==NULL)
       /* there is no trajectory containing the time in its range
        * or a state transition has occured
        */
@@ -217,7 +242,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 
 
 Ego::Point::Point(double time_, const StateMachine &state_, const dvector &xy_, Trajectory::MinJerk *t)
-  : time(time_), xy(xy_), min_jerk(t), state(state_)
+  : time(time_), xy(xy_), trajectory(t), state(state_)
 {
 
 }

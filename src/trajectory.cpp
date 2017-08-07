@@ -85,19 +85,19 @@ void MinJerk::solve(dvector &coeff, const Eigen::MatrixXd &A, const Eigen::Matri
 void MinJerk::solve0(dvector & coeff, const TimeRange &time_span, const VecRange &range)
 {
   Eigen::MatrixXd A(3,3);
-  double dt(time_span.second-time_span.first);
-  double dt2(dt*dt);
-  double dt3(dt2*dt);
-  double dt4(dt2*dt2);
-  double dt5(dt2*dt3);
-  A << dt3,        dt4,     dt5,
-       3.*dt2,  4.*dt3,  5.*dt4,
-       6.*dt,  12.*dt2, 20.*dt3;
+  double Dt(time_span.second-time_span.first);
+  double Dt2(Dt*Dt);
+  double Dt3(Dt2*Dt);
+  double Dt4(Dt2*Dt2);
+  double Dt5(Dt2*Dt3);
+  A <<    Dt3,     Dt4,     Dt5,
+       3.*Dt2,  4.*Dt3,  5.*Dt4,
+       6.*Dt,  12.*Dt2, 20.*Dt3;
 
   Eigen::MatrixXd v(3,1);
   const dvector & end(range.second);
-  v << end[0] - (coeff[0] + coeff[1] * dt + coeff[2] * dt2),
-       end[1] - (coeff[1] + 2.*coeff[2] * dt),
+  v << end[0] - (coeff[0] + coeff[1] * Dt + coeff[2] * Dt2),
+       end[1] - (coeff[1] + 2.*coeff[2] * Dt),
        end[2] - (2.*coeff[2]);
 
   MinJerk::solve(coeff, A, v);
@@ -106,17 +106,17 @@ void MinJerk::solve0(dvector & coeff, const TimeRange &time_span, const VecRange
 void MinJerk::solve1(dvector &coeff, const TimeRange &time_span, const VecRange &range)
 {
   Eigen::MatrixXd A(3,3);
-  double dt(time_span.second-time_span.first);
-  double dt2(dt*dt);
-  double dt3(dt2*dt);
-  double dt4(dt2*dt2);
-  A << 3.*dt2,  4.*dt3,  5.*dt4,
-       6.*dt,  12.*dt2, 20.*dt3,
-       6.,     24.*dt,  60.*dt2;
+  double Dt(time_span.second-time_span.first);
+  double Dt2(Dt*Dt);
+  double Dt3(Dt2*Dt);
+  double Dt4(Dt2*Dt2);
+  A << 3.*Dt2,  4.*Dt3,  5.*Dt4,
+       6.*Dt,  12.*Dt2, 20.*Dt3,
+       6.,     24.*Dt,  60.*Dt2;
 
   Eigen::MatrixXd v(3,1);
   const dvector & end(range.second);
-  v << end[0] - (coeff[1] + 2.*coeff[2] * dt),
+  v << end[0] - (coeff[1] + 2.*coeff[2] * Dt),
        end[1] - (2.*coeff[2]),
        end[2];
 
@@ -152,7 +152,6 @@ void MinJerk::generate()
 {
   double time_param(time_span.first);
   double time(time_param);
-  const double dt(0.02);
 
   double curvature;
 
@@ -190,12 +189,11 @@ void MinJerk::generate()
 
 int MinJerk::index_time(double time) const
 {
-  const double dt(0.02);
   return (time+0.25*dt-time_span.first)/(time_span.second-time_span.first) * (data[0].size()-1);
 }
 
-MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const VecRange &d_range_, const HighwayMap &hwmap_, int type_)
-  : hwmap(hwmap_), time_span(time_span_), s_range(s_range_), d_range(d_range_), type(type_), s_coeff(6), d_coeff(6), data(8)
+MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const VecRange &d_range_, const HighwayMap &hwmap_, int type_, double dt_)
+  : hwmap(hwmap_), time_span(time_span_), s_range(s_range_), d_range(d_range_), type(type_), s_coeff(6), d_coeff(6), data(8), dt(dt_)
 {
   // initial conditions fix first three coefficients
   s_coeff[0] = HighwayMap::range_s(s_range_.first[0]);

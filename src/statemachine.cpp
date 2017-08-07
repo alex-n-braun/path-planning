@@ -1,13 +1,26 @@
 #include "statemachine.h"
+#include "ego.h"
 
 StateMachine::StateMachine()
-  : state(maxspeed)
+  : state(StateMachine::lanefollow)
 {
 
 }
 
-bool StateMachine::transition(const Trajectory::MinJerk *trajectory, const Predictions::Predictions &predictions, double time)
+bool StateMachine::transition(const Status &status)
 {
-  return false;
+  bool update(false);
+
+  switch (state)
+  {
+  case StateMachine::lanefollow:
+    {
+
+    }
+    break;
+
+  }
+
+  return update;
 }
 

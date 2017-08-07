@@ -50,6 +50,7 @@ private:
   void generate();
   int index_time(double time) const;
 public:
+  const double dt;
   TimeRange time_span;
   MinJerk();
   /* compute a trajectory polynomial for s and d with fixed boundary conditions.
@@ -59,7 +60,7 @@ public:
    *    1: speed, acceleration, jerk given (no obstacles on the road? then why specify
    *       a final s?)
    */
-  MinJerk(const TimeRange & time_span_, const VecRange & s_range_, const VecRange & d_range_, const HighwayMap & hwmap_, int type_);
+  MinJerk(const TimeRange & time_span_, const VecRange & s_range_, const VecRange & d_range_, const HighwayMap & hwmap_, int type_, double dt_ = 0.02);
   ~MinJerk();
   double s(double time) const;
   double d(double time) const;

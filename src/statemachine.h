@@ -3,15 +3,19 @@
 
 #include "trajectory.h"
 #include "predictions.h"
+#include "highwaymap.h"
 
 class StateMachine
 {
 public:
-  enum States { maxspeed, constdist };
+  class Status {
+  public:
+  };
+
+  enum States { lanefollow };
   States state;
   StateMachine();
-  bool transition(const Trajectory::MinJerk * trajectory,
-                  const Predictions::Predictions & predictions, double time);
+  bool transition(const Status &status);
 };
 
 #endif // STATEMACHINE_H
