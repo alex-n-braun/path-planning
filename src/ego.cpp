@@ -6,7 +6,7 @@ const double Ego::max_dist(3.*min_dist);
 
 bool Ego::check_keep_conditions(const Ego::Point &p, const Predictions::Predictions &predictions) const
 {
-  return true;
+  return false;
 }
 
 void Ego::generate_initial_trajectory(const Telemetry &t)
@@ -36,7 +36,7 @@ void Ego::generate_initial_trajectory(const Telemetry &t)
 
   // speed in s direction
   // double goal_rescale(1.0/(1.0+curvature*des_d));
-  double goal_speed_s(goal_speed);
+  double goal_speed_s(desired_speed);
 
 
   // jerk-minimizing trajectory with unspecified final s
@@ -46,7 +46,7 @@ void Ego::generate_initial_trajectory(const Telemetry &t)
                                Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
                                         {goal_speed_s, 0., 0.}),
                                Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                        {des_d, 0., 0.}), hwmap, 1);
+                                        {des_d, 0., 0.}), hwmap, 1, dt);
   trajectories[time_range.first] = min_jerk;
 }
 
@@ -68,7 +68,7 @@ Trajectory::MinJerk *Ego::find_trajectory(double time) const
 Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & state, Trajectory::MinJerk *trajectory, double time)
 {
   // erase all trajectories that are in the future
-  double eps(0.02*0.1);
+  double eps(dt*0.1);
   for (auto future(trajectories.lower_bound(time-eps)); future!=trajectories.end(); future++)
     delete future->second;
   trajectories.erase(trajectories.lower_bound(time-eps), trajectories.end());
@@ -98,7 +98,7 @@ Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & sta
                                  Trajectory::VecRange({start_s, start_speed_s, start_accel_s},
                                           {goal_speed, 0., 0.}),
                                  Trajectory::VecRange({start_d, start_speed_d, start_accel_d},
-                                          {goal_d, 0., 0.}), hwmap, 1);
+                                          {goal_d, 0., 0.}), hwmap, 1, dt);
     trajectories[time_range.first] = new_trajectory;
 
     return new_trajectory;
@@ -118,8 +118,8 @@ void Ego::keep_trajectories(const std::set<Trajectory::MinJerk *> &keep)
   }
 }
 
-Ego::Ego(const HighwayMap &hwmap_)
-  : hwmap(hwmap_), base_time(0.)
+Ego::Ego(const HighwayMap &hwmap_, double desired_speed_, double dt_)
+  : hwmap(hwmap_), base_time(0.), desired_speed(desired_speed_), dt(dt_)
 {
   re_init();
 }
@@ -139,11 +139,9 @@ void Ego::re_init()
   storage.clear();
 }
 
-Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictions)
+Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictions, double time_horizon)
 {
   Response r;
-
-  const double dt(0.02);
 
   /* we have computed a path in the previous computation step.
    * This information can be reused. The simulator sends the
@@ -152,7 +150,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 
   int path_size = t.previous_path_x.size();
   const int min_keep_steps(10);
-  int max_path_size(370); //(init==0 | path_size==0 ? 200 : path_size);
+  int max_path_size(time_horizon / dt); //(init==0 | path_size==0 ? 200 : path_size);
 
   int consumed_steps(max_path_size-path_size);
   if (path_size==0)
@@ -179,7 +177,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 //             <<std::endl;
 
     auto p(storage.begin());
-    for (; (p!=storage.end() ? check_keep_conditions(*p, predictions) : false) & keep_steps<path_size-1; ++p)
+    for (; keep_steps<min_keep_steps | ((p!=storage.end() ? check_keep_conditions(*p, predictions) : false) & keep_steps<path_size-1); ++p)
       /* HINT: there is a problem with the storage when the
        * complete history is used; therefore at least one
        * element at the end of the storage is removed
@@ -213,7 +211,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 
     for (int i(1); i<=max_path_size-keep_steps; ++i)
     {
-      double time(base_time+double(keep_steps)*dt+double(i)*dt);
+      double time(base_time+double(keep_steps+i)*dt);
       Trajectory::MinJerk * next_trajectory = find_trajectory(time);
       if (next_trajectory==NULL)
       /* there is no trajectory containing the time in its range

@@ -225,12 +225,18 @@ MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const Ve
 
   // generate values
   generate();
-
 }
 
 MinJerk::~MinJerk()
 {
   std::cout<<"delete trajectory ("<<time_span.first<<", "<<time_span.second<<")"<<std::endl;
+}
+
+void MinJerk::resample(double dt_)
+{
+  dt = dt_;
+  data.clear();
+  generate();
 }
 
 double MinJerk::s(double time) const

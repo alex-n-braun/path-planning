@@ -50,7 +50,7 @@ private:
   void generate();
   int index_time(double time) const;
 public:
-  const double dt;
+  double dt;
   TimeRange time_span;
   MinJerk();
   /* compute a trajectory polynomial for s and d with fixed boundary conditions.
@@ -62,6 +62,8 @@ public:
    */
   MinJerk(const TimeRange & time_span_, const VecRange & s_range_, const VecRange & d_range_, const HighwayMap & hwmap_, int type_, double dt_ = 0.02);
   ~MinJerk();
+  // resample data with delta time dt_
+  void resample(double dt_);
   double s(double time) const;
   double d(double time) const;
   dvector sd(double time) const;

@@ -27,7 +27,8 @@ private:
   };
 
   double base_time;
-
+  double desired_speed;
+  double dt;
 
   const HighwayMap & hwmap;
 
@@ -42,10 +43,10 @@ private:
   // keep all trajectories on the list that are still in use and remove all the others
   void keep_trajectories(const std::set<Trajectory::MinJerk*> & keep);
 public:
-  Ego(const HighwayMap & hwmap_);
+  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02);
   ~Ego();
   void re_init();
-  Response path(const Telemetry &t, const Predictions::Predictions & predictions);
+  Response path(const Telemetry &t, const Predictions::Predictions & predictions, double time_horizon = 7.4);
 };
 
 #endif // EGO_H
