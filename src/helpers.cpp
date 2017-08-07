@@ -68,3 +68,13 @@ double dabs(double x)
 {
   return x>=0 ? x : -x;
 }
+
+double dmin(double x1, double x2)
+{
+  return x1<=x2 ? x1 : x2;
+}
+
+double dmax(double x1, double x2)
+{
+  return x1>=x2 ? x1 : x2;
+}

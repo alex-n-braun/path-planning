@@ -79,11 +79,12 @@ int main() {
             auto millis = std::chrono::duration_cast<std::chrono::milliseconds>(duration).count();
 
             double time_stamp(double(millis)*1e-3); // time stamp in seconds
-//            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
-//                    <<", s: "<<telemetry.car_s
-//                    <<std::endl;
 
             Telemetry telemetry(j[1]);
+
+            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
+                    <<", s: "<<telemetry.car_s
+                    <<std::endl;
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 

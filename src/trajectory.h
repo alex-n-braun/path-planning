@@ -61,6 +61,7 @@ public:
    *       a final s?)
    */
   MinJerk(const TimeRange & time_span_, const VecRange & s_range_, const VecRange & d_range_, const HighwayMap & hwmap_, int type_, double dt_ = 0.02);
+  MinJerk(const MinJerk & t); // INCOMPLETE copy constructor!!! call to resample is mandatory!
   ~MinJerk();
   // resample data with delta time dt_
   void resample(double dt_);

@@ -227,6 +227,12 @@ MinJerk::MinJerk(const TimeRange &time_span_, const VecRange &s_range_, const Ve
   generate();
 }
 
+MinJerk::MinJerk(const MinJerk &t)
+  : hwmap(t.hwmap), time_span(t.time_span), s_range(t.s_range), d_range(t.d_range), type(t.type), s_coeff(t.s_coeff), d_coeff(t.d_coeff), data(8), dt(-1)
+{
+
+}
+
 MinJerk::~MinJerk()
 {
   std::cout<<"delete trajectory ("<<time_span.first<<", "<<time_span.second<<")"<<std::endl;
@@ -235,7 +241,8 @@ MinJerk::~MinJerk()
 void MinJerk::resample(double dt_)
 {
   dt = dt_;
-  data.clear();
+  for (int i(0); i<8; ++i)
+    data[i].clear();
   generate();
 }
 

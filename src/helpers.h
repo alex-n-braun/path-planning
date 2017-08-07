@@ -12,6 +12,8 @@ double deg2rad(double x);
 double rad2deg(double x);
 
 double dabs(double x);
+double dmin(double x1, double x2);
+double dmax(double x1, double x2);
 
 // scalar product for 2d vector
 double sprod(const dvector & v1, const dvector & v2);
