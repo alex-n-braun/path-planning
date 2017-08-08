@@ -29,6 +29,7 @@ private:
   class Plan{
   public:
     double score;
+    double s;
     Plan * sub_plan;
     Ego * ego;
     Plan(Plan * sub_plan_, Ego * ego_);
@@ -39,7 +40,7 @@ private:
 
   double base_time;
   double time_horizon;
-  const double lane_follow_time = 4.0;
+  const double lane_follow_time = 2.0;
   double desired_speed;
   double desired_d;
   double dt;
@@ -61,7 +62,7 @@ protected:
   Trajectory::MinJerk *find_trajectory(double time) const;
   Plan * generate_plan(const Point &point, const Predictions::Predictions &predictions, double delta_t);  // returns a plan
 public:
-  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 7.4);
+  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 4.);
   Ego(const Ego & parent_, double base_time_, double time_horizon_, double desired_speed_, double desired_d_, double dt_);
   ~Ego();
   void re_init();

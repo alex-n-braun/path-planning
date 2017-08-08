@@ -235,7 +235,7 @@ MinJerk::MinJerk(const MinJerk &t)
 
 MinJerk::~MinJerk()
 {
-  std::cout<<"delete trajectory ("<<time_span.first<<", "<<time_span.second<<")"<<std::endl;
+//  std::cout<<"delete trajectory ("<<time_span.first<<", "<<time_span.second<<")"<<std::endl;
 }
 
 void MinJerk::resample(double dt_)

@@ -1,6 +1,7 @@
 #include "helpers.h"
 #include <numeric>
 #include <functional>
+#include <utility>
 
 
 // For converting back and forth between radians and degrees.
@@ -77,4 +78,12 @@ double dmin(double x1, double x2)
 double dmax(double x1, double x2)
 {
   return x1>=x2 ? x1 : x2;
+}
+
+double dsort(double &x1, double &x2)
+{
+  if (x1>x2)
+  {
+    std::swap(x1,x2);
+  }
 }
