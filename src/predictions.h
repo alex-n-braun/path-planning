@@ -41,6 +41,7 @@ public:
 class Predictions {
 public:
   std::multimap<int, Prediction*> preds;
+  typedef std::pair<int, Prediction*> ID_Prediction;
   Predictions(const Records & records, const HighwayMap &hwmap, double delta_t, int steps = 12);
   ~Predictions();
 };

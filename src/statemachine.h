@@ -12,10 +12,11 @@ public:
   public:
   };
 
-  enum States { lanefollow };
+  enum States { lanefollow, lanechange };
   States state;
-  StateMachine();
-  bool transition(const Status &status);
+//  StateMachine();
+  StateMachine(States state_);
+  StateMachine(const StateMachine & sm);
 };
 
 #endif // STATEMACHINE_H

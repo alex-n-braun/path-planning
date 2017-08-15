@@ -1,26 +1,12 @@
 #include "statemachine.h"
 #include "ego.h"
 
-StateMachine::StateMachine()
-  : state(StateMachine::lanefollow)
-{
+//StateMachine::StateMachine()
+//  : state(StateMachine::lanefollow) { }
 
-}
+StateMachine::StateMachine(StateMachine::States state_)
+  : state(state_) { }
 
-bool StateMachine::transition(const Status &status)
-{
-  bool update(false);
-
-  switch (state)
-  {
-  case StateMachine::lanefollow:
-    {
-
-    }
-    break;
-
-  }
-
-  return update;
-}
+StateMachine::StateMachine(const StateMachine &sm)
+  : state(sm.state) { }
 

@@ -1,5 +1,6 @@
 #include "predictions.h"
 #include "helpers.h"
+#include <iostream>
 
 namespace Predictions {
 
@@ -35,6 +36,7 @@ Straight::Straight(const Record &record_, const HighwayMap &hwmap, double delta_
       totweight += weight;
     }
     speed0 = scalevec(speed0, 1./totweight);
+//    std::cout<<"observed speed: "<<lenvec(speed0)<<std::endl;
   }
   else
     speed0 = detection.speed();

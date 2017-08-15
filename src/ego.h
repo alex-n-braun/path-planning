@@ -11,7 +11,7 @@
 class Ego
 {
 public:
-  // goal speed (49.5 Mph)
+  // goal speed (49.25 Mph)
   static const double goal_speed;  // m/s
   static const double min_dist;    // m
   static const double max_dist;    // m
@@ -32,7 +32,8 @@ private:
     double s;
     Plan * sub_plan;
     Ego * ego;
-    Plan(Plan * sub_plan_, Ego * ego_);
+    StateMachine state;
+    Plan(const StateMachine & state_, Plan * sub_plan_, Ego * ego_);
     ~Plan();
   };
 
@@ -58,11 +59,16 @@ private:
   Trajectory::MinJerk *generate_successor_trajectory(const StateMachine & state, Trajectory::MinJerk * trajectory, double time);
   // keep all trajectories on the list that are still in use and remove all the others
   void keep_trajectories(const std::set<Trajectory::MinJerk*> & keep);
-protected:
+private:
   Trajectory::MinJerk *find_trajectory(double time) const;
+  double calc_safe_speed(double start_s, double car_ahead_s, double car_ahead_speed) const;
+  typedef std::pair<Predictions::Predictions::ID_Prediction, dvector> Car_Ahead;
+  Car_Ahead find_car_ahead(double point_time, double start_s, double start_d, double des_d, const Predictions::Predictions & predictions) const;
+  Plan * lane_follow(const Ego::Point & point, const Predictions::Predictions & predictions, double delta_t) ;
+  Plan * lane_change(const Ego::Point & point, double des_d, const Predictions::Predictions & predictions, double delta_t);
   Plan * generate_plan(const Point &point, const Predictions::Predictions &predictions, double delta_t);  // returns a plan
 public:
-  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 4.);
+  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 7.);
   Ego(const Ego & parent_, double base_time_, double time_horizon_, double desired_speed_, double desired_d_, double dt_);
   ~Ego();
   void re_init();

@@ -49,7 +49,7 @@ int main() {
   double old_time_stamp(0);
 
   // recording sensor detections of cars in a certain range in s direction
-  Records records(250. /* range in m */);
+  Records records(150. /* range in m */);
 
   // ego object
   Ego ego(highway_map);
