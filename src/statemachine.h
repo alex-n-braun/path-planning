@@ -13,9 +13,10 @@ public:
   };
 
   enum States { lanefollow, lanechange };
+  int dest_lane;
   States state;
 //  StateMachine();
-  StateMachine(States state_);
+  StateMachine(States state_, int dest_lane_);
   StateMachine(const StateMachine & sm);
 };
 

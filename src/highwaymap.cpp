@@ -269,6 +269,16 @@ dvector HighwayMap::getSmoothXY(const dvector &sd) const
   return {getSmoothXY(sd[0], sd[1])};
 }
 
+int HighwayMap::getLane(double d) const
+{
+  return d/4;
+}
+
+double HighwayMap::get_d_from_lane(int lane) const
+{
+  return 2.+4.+3.6*double(lane-1);
+}
+
 dvector HighwayMap::tangent(double s) const
 {
   return map_trajectory.tangent(s);

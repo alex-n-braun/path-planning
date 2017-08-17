@@ -50,6 +50,8 @@ public:
   // (spline interpolation)
   dvector getSmoothXY(double s, double d) const;
   dvector getSmoothXY(const dvector & sd) const;
+  int getLane(double d) const;
+  double get_d_from_lane(int lane) const;
   // get tangent on the street
   dvector tangent(double s) const;
   // get orthogonal on the street

@@ -24,6 +24,7 @@ private:
     StateMachine state;
     Trajectory::MinJerk * trajectory;
     Point(double time_, const StateMachine & state_, const dvector & xy_, const dvector & sd_, Trajectory::MinJerk * t);
+    Point();
     ~Point();
   };
   class Plan{
@@ -43,7 +44,7 @@ private:
   double time_horizon;
   const double lane_follow_time = 2.0;
   double desired_speed;
-  double desired_d;
+//  double desired_d;
   double dt;
 
   const HighwayMap & hwmap;
@@ -53,23 +54,23 @@ private:
 
 
   // for a point p in the storage, check if it can be kept according to the predictions
-  bool check_keep_conditions(const Point & p, const Predictions::Predictions &predictions) const;
+//  bool check_keep_conditions(const Point & p, const Predictions::Predictions &predictions) const;
 
-  void generate_initial_trajectory(const Telemetry &t);
-  Trajectory::MinJerk *generate_successor_trajectory(const StateMachine & state, Trajectory::MinJerk * trajectory, double time);
+  Trajectory::MinJerk *generate_successor_trajectory(const StateMachine &state, const dvector & ini_state, double time);
   // keep all trajectories on the list that are still in use and remove all the others
-  void keep_trajectories(const std::set<Trajectory::MinJerk*> & keep);
+  void keep_trajectories(const std::set<Trajectory::MinJerk *> &keep);
 private:
   Trajectory::MinJerk *find_trajectory(double time) const;
   double calc_safe_speed(double start_s, double car_ahead_s, double car_ahead_speed) const;
   typedef std::pair<Predictions::Predictions::ID_Prediction, dvector> Car_Ahead;
   Car_Ahead find_car_ahead(double point_time, double start_s, double start_d, double des_d, const Predictions::Predictions & predictions) const;
+  dvector get_initial_conditions(const Point &point) const;
   Plan * lane_follow(const Ego::Point & point, const Predictions::Predictions & predictions, double delta_t) ;
   Plan * lane_change(const Ego::Point & point, double des_d, const Predictions::Predictions & predictions, double delta_t);
   Plan * generate_plan(const Point &point, const Predictions::Predictions &predictions, double delta_t);  // returns a plan
 public:
-  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 7.);
-  Ego(const Ego & parent_, double base_time_, double time_horizon_, double desired_speed_, double desired_d_, double dt_);
+  Ego(const HighwayMap & hwmap_, double desired_speed_ = Ego::goal_speed, double dt_ = 0.02, double time_horizon_ = 3.5);
+  Ego(const Ego & parent_, double base_time_, double time_horizon_, double desired_speed_, /*double desired_d_, */double dt_);
   ~Ego();
   void re_init();
   Response path(const Telemetry &t, const Predictions::Predictions & predictions);
