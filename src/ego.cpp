@@ -80,6 +80,45 @@ Ego::Car_Ahead Ego::find_car_ahead(double point_time, double start_s, double sta
   return Car_Ahead(Predictions::Predictions::ID_Prediction(id_closest, pred), pos);
 }
 
+Ego::Car_Ahead Ego::find_car_aside(double point_time, double start_s, double start_d, double des_d, const Predictions::Predictions & predictions) const
+{
+  // find the car in front of us in our desired lane. Is there a record of such a car?
+  double delta_closest(9.0); // distance to the next car; should not be less than 5 meters
+
+  int id_closest(-1); // id of the closest car
+
+  double left_d(start_d);
+  double right_d(des_d);
+  dsort(left_d, right_d); // "left" is really left of right
+
+  dvector pos;
+  Predictions::Prediction * pred(NULL);
+
+  std::pair<double, double> d_rl_boundaries(left_d-2., right_d+2.); // boundaries of the lane
+  for (auto p(predictions.preds.cbegin()); p!=predictions.preds.cend(); ++p)
+  {
+    Predictions::Prediction * predn_  = p->second;
+    dvector pos_(predn_->trajectory(point_time-base_time));
+    dvector sd(hwmap.getSmoothFrenet(pos_));
+    if (sd[1]>d_rl_boundaries.first & sd[1]<d_rl_boundaries.second)
+      // yes, the car is on my lane! but is it the one that is next to me?
+    {
+      double delta_s(HighwayMap::distance_s(start_s, sd[0]));
+
+      if (delta_s>-delta_closest & delta_s<delta_closest)
+      {
+        delta_closest=dabs(delta_s);
+        id_closest=p->first;
+        pred=predn_;
+        pos=pos_;
+//        std::cout<<delta_s<<" "<<delta_closest<<std::endl;
+      }
+    }
+  }
+
+  return Car_Ahead(Predictions::Predictions::ID_Prediction(id_closest, pred), pos);
+}
+
 dvector Ego::get_initial_conditions(const Point & point) const
 {
   if (point.trajectory!=NULL)
@@ -121,11 +160,12 @@ Ego::Plan * Ego::lane_follow(const Ego::Point & point, const Predictions::Predic
 
   Ego::Point newpoint(point.time+delta_t, new_state, xy, sd, new_trajectory);
 
-  double new_delta_t = dmin(delta_t*1.1, (new_trajectory->time_span.second-new_trajectory->time_span.first)*(1.-1.e-12));
+  double new_delta_t = dmin(delta_t*1.3, (new_trajectory->time_span.second-new_trajectory->time_span.first)*(1.-1.e-12));
   Ego::Plan * subplan = future1->generate_plan(newpoint, predictions, new_delta_t);
 
   Plan * plan(new Ego::Plan(new_state, subplan, future1, base_time + time_horizon));
-  plan->score -= dabs(start_d-des_d);
+//  plan->score -= dabs(start_d-des_d);
+  plan->score *= 0.5;
 
   return plan;
 }
@@ -161,11 +201,27 @@ Ego::Plan * Ego::lane_change(const Ego::Point & point, double des_d, const Predi
 
   Ego::Point newpoint(point.time+delta_t, new_state, xy, sd, new_trajectory);
 
-  double new_delta_t = dmin(delta_t*1.1, (new_trajectory->time_span.second-new_trajectory->time_span.first)*(1.-1.e-12));
+  double new_delta_t = dmin(delta_t*1.3, (new_trajectory->time_span.second-new_trajectory->time_span.first)*(1.-1.e-12));
   Ego::Plan * subplan = future1->generate_plan(newpoint, predictions, new_delta_t);
 
   Plan * plan(new Ego::Plan(newpoint.state, subplan, future1, base_time + time_horizon));
-  plan->score -= dabs(start_d-des_d);
+  plan->score *= 0.5;
+  plan->score -= dabs(start_d-des_d)/delta_t;
+
+  /* is there a car in between me and my desired lane?
+   * then I need to penalize that.
+   */
+  if (recursion_depth < 3)
+  {
+    Car_Ahead car_aside(find_car_aside(point.time, start_s, start_d, des_d, predictions));
+    int id_car_aside(car_aside.first.first); // id of the car
+
+    if (id_car_aside>=0)
+    {
+      plan->score = -1.0/0.0;
+//      std::cout<<"Car next to me"<<std::endl;
+    }
+  }
 
   return plan;
 }
@@ -204,22 +260,41 @@ Ego::Plan * Ego::generate_plan(const Ego::Point & point, const Predictions::Pred
       plans[lc] = lane_change(point, des_d, predictions, delta_t);
     }
 
-    // travelled distance rating
+    // rating
+    dvector score(3);
+    for (int i=0; i<3; ++i)
+      score[i] = plans[i]->score;
+
+    // delta travelled distance
     double dist1(hwmap.distance_s(plans[0]->s, plans[1]->s));
     double dist2(hwmap.distance_s(plans[0]->s, plans[2]->s));
+
+    score[1] += dist1*70.;
+    score[2] += dist2*70.;
+
 //    {
 //      for (int i(0); i<3; ++i)
 //        std::cout<<i<<": "<<plans[i]->s<<", ";
 //      std::cout<<std::endl;
 //    }
     int lc(0);
-    if (dist1>dist2)
+    if (score[1]>score[2])
     {
-      if (dist1>0)
+      if (score[1]>score[0])
         lc=1;
     }
-    else if (dist2>0)
+    else if (score[2]>score[0])
       lc=2;
+//    if (dist1>dist2)
+//    {
+//      if (dist1>0)
+//        lc=1;
+//    }
+//    else if (dist2>0)
+//      lc=2;
+
+//    if (recursion_depth == 0)
+//      std::cout<<score[0]<<" "<<score[1]<<" "<<score[2]<<" -- "<<dist1<<" "<<dist2<<std::endl;
 
     for (int i(0); i<3; ++i) if (i!=lc) delete plans[i];
     return plans[lc];
@@ -433,15 +508,15 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
   keep_trajectories(used_trajectories);
 
   Plan * iterate(plan);
-//  while (iterate!=NULL)
-//  {
+  while (iterate!=NULL)
+  {
     Trajectory::MinJerk * next_trajectory(new Trajectory::MinJerk(*(iterate->ego->trajectories.begin()->second)));
     next_trajectory->resample(dt);
     trajectories[next_trajectory->time_span.first] = next_trajectory;
 
     Plan * sub_plan(iterate->sub_plan);
     iterate=sub_plan;
-//  }
+  }
 
   StateMachine state(plan->state);
   if (state.state != point.state.state)

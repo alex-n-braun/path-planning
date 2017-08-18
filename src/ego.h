@@ -66,6 +66,7 @@ private:
   double calc_safe_speed(double start_s, double car_ahead_s, double car_ahead_speed) const;
   typedef std::pair<Predictions::Predictions::ID_Prediction, dvector> Car_Ahead;
   Car_Ahead find_car_ahead(double point_time, double start_s, double start_d, double des_d, const Predictions::Predictions & predictions) const;
+  Car_Ahead find_car_aside(double point_time, double start_s, double start_d, double des_d, const Predictions::Predictions & predictions) const;
   dvector get_initial_conditions(const Point &point) const;
   Plan * lane_follow(const Ego::Point & point, const Predictions::Predictions & predictions, double delta_t) ;
   Plan * lane_change(const Ego::Point & point, double des_d, const Predictions::Predictions & predictions, double delta_t);
