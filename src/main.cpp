@@ -49,12 +49,14 @@ int main() {
   double old_time_stamp(0);
 
   // recording sensor detections of cars in a certain range in s direction
-  Records records(50. /* range in m */);
+  Records records(100. /* range in m */);
 
   // ego object
   Ego ego(highway_map);
 
-  h.onMessage([&ego, &highway_map, &records, start_time, &old_time_stamp]
+  double max_delta_time(0.); // just for debugging
+
+  h.onMessage([&ego, &highway_map, &records, start_time, &old_time_stamp, &max_delta_time]
               (uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
@@ -82,9 +84,11 @@ int main() {
 
             Telemetry telemetry(j[1]);
 
-            std::cout<<"Delta time: "<<time_stamp-old_time_stamp
-                    <<", s: "<<telemetry.car_s
-                    <<std::endl;
+            max_delta_time = (time_stamp-old_time_stamp > max_delta_time
+                              ? std::cout<<"Maximum delta time so far: "<<time_stamp-old_time_stamp
+                                <<", s: "<<telemetry.car_s
+                                <<std::endl, time_stamp-old_time_stamp
+                              : max_delta_time);
 
             // TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
 
@@ -110,6 +114,8 @@ int main() {
 //            //  r=fe_minjerk(telemetry, highway_map, records, predictions);
 //              r=fe_evenmore_minjerk(telemetry, highway_map, records, predictions);
 //            /* end of finger exercises */
+
+              /* path planning for the ego car */
               r = ego.path(telemetry, predictions);
             }
             else if (time_stamp<0.5)

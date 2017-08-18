@@ -34,7 +34,7 @@ private:
     Plan * sub_plan;
     Ego * ego;
     StateMachine state;
-    Plan(const StateMachine & state_, Plan * sub_plan_, Ego * ego_);
+    Plan(const StateMachine & state_, Plan * sub_plan_, Ego * ego_, double max_s_time);
     ~Plan();
   };
 
@@ -44,8 +44,10 @@ private:
   double time_horizon;
   const double lane_follow_time = 2.0;
   double desired_speed;
-//  double desired_d;
   double dt;
+
+  // recursion depth for path planning
+  int recursion_depth = 0;
 
   const HighwayMap & hwmap;
 

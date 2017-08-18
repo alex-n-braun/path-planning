@@ -30,7 +30,7 @@ void Records::update(double time_stamp, const Telemetry &telemetry)
   for (auto el(to_be_deleted.cbegin()); el!=to_be_deleted.cend(); ++el)
   {
 //    // debugging:
-//    std::cout<<"-- "<<*el<<" > "<<records[*el]<<std::endl;
+    std::cout<<"Records of other cars: -- "<<*el/*<<" > "<<records[*el]*/<<std::endl;
     records.erase(*el);
   }
   // extend records of cars in range; create new records if needed
@@ -43,13 +43,13 @@ void Records::update(double time_stamp, const Telemetry &telemetry)
       if (records.find(el->first)==records.end())
       {
         records[el->first] = Record(el->first, rec_size);
-//        // debugging:
-//        std::cout<<"++ "<<el->first<<" [";
-//        for (auto i(records.cbegin()); i!=records.cend(); ++i)
-//        {
-//          std::cout<<i->first<<" ";
-//        }
-//        std::cout<<"]"<<std::endl;
+        // debugging:
+        std::cout<<"Records of other cars: ++ "<<el->first<<" [";
+        for (auto i(records.cbegin()); i!=records.cend(); ++i)
+        {
+          std::cout<<i->first<<" ";
+        }
+        std::cout<<"]"<<std::endl;
       }
       records[el->first].record(time_stamp, el->second);
     }
