@@ -13,8 +13,9 @@ class Ego
 public:
   // goal speed (49.25 Mph)
   static const double goal_speed;  // m/s
-  static const double min_dist;    // m
+  static const double des_dist;    // m
   static const double max_dist;    // m
+  static const double min_dist;    // m
 private:
   class Point {
   public:

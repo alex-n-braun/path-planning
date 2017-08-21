@@ -1,8 +1,9 @@
 #include "ego.h"
 
 const double Ego::goal_speed  = 49.25*1.609344/3.6;  // m/s
-const double Ego::min_dist(6.*4.);  // 6 cars
-const double Ego::max_dist(3.*min_dist);
+const double Ego::des_dist(24.);  // 24m = 4 cars
+const double Ego::max_dist(3.*Ego::des_dist);
+const double Ego::min_dist(8.);
 
 Trajectory::MinJerk *Ego::find_trajectory(double time) const
 {
@@ -24,19 +25,27 @@ double Ego::calc_safe_speed(double start_s, double car_ahead_s, double car_ahead
   double scale(1.);
   // distance
   double dist_s(hwmap.distance_s(start_s,car_ahead_s));
-  /* specification for acceleration planning: at a distance min_dist,
+  /* specification for acceleration planning: at a distance des_dist,
    * the ego speed should equal the speed of the car ahead of the ego.
    * at a distance max_dist or more, ego may drive at its goal_speed.
    * In both situations, acceleration should be zero.
    * In between, the ego's speed should be interpolated "smoothly".
    */
-  scale=((dist_s-min_dist)/(max_dist-min_dist));
+  scale=((dist_s-des_dist)/(max_dist-des_dist));
   scale=(scale>1. ? 1. : scale); // 0<=scale<=1
+  double des_speed_;
   if (scale>=0)
+  {
     scale=1.-0.5*(1.+cos(M_PI*scale)); // still 0<=scale<=1, but S-shaped
+    des_speed_ = scale*goal_speed + (1.-scale)*car_ahead_speed;
+  }
   else
-    scale=-scale*scale; // don't want dist_s to be smaller then min_dist!
-  double des_speed_(scale*goal_speed + (1.-scale)*car_ahead_speed);
+  {
+    // don't want dist_s to be smaller then des_dist!
+    scale = (dist_s-des_dist)/(des_dist-min_dist);
+    scale = 1.-scale*scale;
+    des_speed_ = scale*car_ahead_speed;
+  }
   des_speed_ = (des_speed_<0. ? 0. : des_speed_);
 
   return des_speed_;
@@ -105,7 +114,7 @@ Ego::Car_Ahead Ego::find_car_aside(double point_time, double start_s, double sta
     {
       double delta_s(HighwayMap::distance_s(start_s, sd[0]));
 
-      if (delta_s>-delta_closest & delta_s<delta_closest)
+      if (delta_s>-2.*delta_closest & delta_s<delta_closest)
       {
         delta_closest=dabs(delta_s);
         id_closest=p->first;
@@ -211,7 +220,7 @@ Ego::Plan * Ego::lane_change(const Ego::Point & point, double des_d, const Predi
   /* is there a car in between me and my desired lane?
    * then I need to penalize that.
    */
-  if (recursion_depth < 3)
+  if (recursion_depth < 5)
   {
     Car_Ahead car_aside(find_car_aside(point.time, start_s, start_d, des_d, predictions));
     int id_car_aside(car_aside.first.first); // id of the car
@@ -272,11 +281,6 @@ Ego::Plan * Ego::generate_plan(const Ego::Point & point, const Predictions::Pred
     score[1] += dist1*70.;
     score[2] += dist2*70.;
 
-//    {
-//      for (int i(0); i<3; ++i)
-//        std::cout<<i<<": "<<plans[i]->s<<", ";
-//      std::cout<<std::endl;
-//    }
     int lc(0);
     if (score[1]>score[2])
     {
@@ -285,16 +289,6 @@ Ego::Plan * Ego::generate_plan(const Ego::Point & point, const Predictions::Pred
     }
     else if (score[2]>score[0])
       lc=2;
-//    if (dist1>dist2)
-//    {
-//      if (dist1>0)
-//        lc=1;
-//    }
-//    else if (dist2>0)
-//      lc=2;
-
-//    if (recursion_depth == 0)
-//      std::cout<<score[0]<<" "<<score[1]<<" "<<score[2]<<" -- "<<dist1<<" "<<dist2<<std::endl;
 
     for (int i(0); i<3; ++i) if (i!=lc) delete plans[i];
     return plans[lc];
@@ -306,75 +300,6 @@ Ego::Plan * Ego::generate_plan(const Ego::Point & point, const Predictions::Pred
   }
   }
 }
-
-//  for (int lc(0); lc<1; ++lc)
-//  // generate future ego for lane following
-//  {
-//    StateMachine new_state(StateMachine::lanefollow);
-//    // find the car in front of us and in our lane. Is there a record of such a car?
-//    double delta_s_closest(1.0/0.0); // distance to the next car
-//    // HINT: remove next line?
-//    int id_closest(-1); // id of the closest car
-//    double start_s(point.sd[0]);
-//    double start_d(point.sd[1]);
-//    double des_d(desired_d);
-
-//    double des_speed_(goal_speed);
-//    double left_d(start_d); double right_d(des_d);
-
-//    if (lc!=-1) // HINT: bullshit???? if lane is to be changed...
-//    {
-//      int lane((int(des_d/4)+lc) % 3);
-//      des_d = 2. + 4. * double(lane);
-
-
-//      dvector pos;
-//      Predictions::Prediction * pred(NULL);
-
-//      right_d = des_d;
-
-//      dsort(left_d, right_d);
-//      std::pair<double, double> d_rl_boundaries(left_d-3., right_d+3.); // boundaries of lane dest_lane, including some safety distance
-//      for (auto p(predictions.preds.cbegin()); p!=predictions.preds.cend(); ++p)
-//      {
-//        Predictions::Prediction * predn_  = p->second;
-//        dvector pos_(predn_->trajectory(point.time-base_time));
-//        dvector sd(hwmap.getSmoothFrenet(pos_));
-//        if (sd[1]>d_rl_boundaries.first & sd[1]<d_rl_boundaries.second)
-//          // yes, the car is on my lane! but is it the one that is next to me?
-//        {
-//          double delta_s(HighwayMap::distance_s(start_s, sd[0]));
-
-//          if (delta_s>(lc==0 ? 0. : -4.) & delta_s<delta_s_closest)
-//          {
-//            delta_s_closest=delta_s;
-//            id_closest=p->first;
-//            pred=predn_;
-//            pos=pos_;
-//          }
-//        }
-//      }
-
-//      if (id_closest>=0)
-//      {
-//        des_speed_ = calc_safe_speed(start_s, hwmap.getSmoothFrenet(pos)[0], lenvec(pred->trajectory.tangent(point.time-base_time)));
-//      }
-//    }
-
-//    Ego * future1 = new Ego(*this, base_time, time_horizon, des_speed_, des_d, delta_t);
-//    Trajectory::MinJerk * new_trajectory(future1->generate_successor_trajectory(new_state, point.trajectory, point.time));
-//    dvector sd(new_trajectory->sd(point.time+delta_t));
-//    dvector xy(hwmap.getSmoothXY(sd));
-
-//    Ego::Point newpoint(point.time+delta_t, new_state, xy, sd, new_trajectory);
-
-//    double new_delta_t = dmin(delta_t*1.3, (new_trajectory->time_span.second-new_trajectory->time_span.first)*(1.-1.e-12));
-//    Ego::Plan * subplan = future1->generate_plan(newpoint, predictions, new_delta_t);
-
-//    plans[lc] = new Ego::Plan(subplan, future1);
-
-//    plans[lc]->score -= dabs(right_d-left_d);
-//  }
 
 Trajectory::MinJerk *Ego::generate_successor_trajectory(const StateMachine & state, const dvector &ini_state, double time)
 {
@@ -466,7 +391,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
 
   std::set<Trajectory::MinJerk*> used_trajectories;
 
-  //  path_size = (path_size > keep_steps ? keep_steps : path_size);
+  /* update the book-keeping */
   int keep_steps(0);
   Point point;
   if (storage.size()>0)
@@ -495,18 +420,15 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
   else // storage is empty; initial time step...
   {
     point = Point(base_time, StateMachine(StateMachine::lanefollow, hwmap.getLane(t.car_d)), {t.car_x, t.car_y}, {t.car_s, t.car_d}, NULL);
-//    desired_d=t.car_d;
   }
 
-//  if (point.state.state == StateMachine::lanechange)
-//    std::cout<<"history says: lane change to "<<point.state.dest_lane<<std::endl;
 
-//  plan_recursion_steps = 0;
+  /* recursively create a sparse plan, delta time = 0.24s */
   Plan * plan(generate_plan(point, predictions, 0.24));
-//  std::cout<<plan_recursion_steps<<std::endl;
   // clear all trajectories from last computation step, since now we do not need them anymore
   keep_trajectories(used_trajectories);
 
+  /* resample the plan to generate trajectories with delta time = dt = 0.02s */
   Plan * iterate(plan);
   while (iterate!=NULL)
   {
@@ -529,8 +451,7 @@ Response Ego::path(const Telemetry &t, const Predictions::Predictions &predictio
   delete plan;
 
 
-//  std::cout<<(state.state == StateMachine::lanefollow ? "lane follow" : "lane change")<<std::endl;
-
+  /* glue the trajectories together, resulting in the final path */
   for (int i(1); i<=max_path_size-keep_steps; ++i)
   {
     double time(base_time+double(keep_steps+i)*dt);

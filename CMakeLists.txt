@@ -13,7 +13,6 @@ set(sources
   src/helpers.cpp
   src/fingerexercises.cpp
   src/trajectory.cpp
-  src/models.cpp
   src/detection.cpp
   src/predictions.cpp
   src/records.cpp
