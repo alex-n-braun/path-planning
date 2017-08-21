@@ -1,5 +1,4 @@
 #include "fingerexercises.h"
-#include "models.h"
 
 Response fe_constspeed(const Telemetry &t)
 {

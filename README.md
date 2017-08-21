@@ -15,7 +15,7 @@ Planning a Path for an Autonomous Vehicle in a Simulator
     - State Machine
     - Trajectories
     - External Dependencies
-- Implementation of the Path Planning Algorith
+- Implementation of the Path Planning Algorithm
     - Path Planning
 - Final Remarks
 
@@ -177,7 +177,7 @@ This is one more important method. Here, the jerk-minimal trajectories are compu
 
 ## Final Remarks
 
-Well, that's it. As already mentioned above, the state machine is not clearly separated in its own component, but mixed into the path generation code. This is not very nice. Also, the computation time needed is quite high on my Core i7-6700 CPU @ 3.4GHz. There are many optimization possibilities. One could play with the delta time for the recursive path planner, for example. On the other hand, the path planner is quite incomplete, for example, it does not consider the possibility to prepare for a lane change as discussed during the lectures. Also, statistical uncertainty in the prediction of the future car positions is not taken into account at all.
+Well, that's it. As already mentioned above, the state machine is not clearly separated in its own component, but mixed into the path generation code. This is not very nice. Also, the computation time needed is quite high on my Core i7-6700 CPU @ 3.4GHz. There are many possibilities for optimization. One could play with the delta time for the recursive path planner, for example. On the other hand, the path planner is quite incomplete, for example, it does not consider the possibility to prepare for a lane change as discussed during the lectures. Also, statistical uncertainty in the prediction of the future car positions is not taken into account at all.
 
 After some weeks of hard work, including many dead ends, I still hope that this is sufficient to pass the criteria.
 
