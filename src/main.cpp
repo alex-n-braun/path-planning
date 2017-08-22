@@ -40,9 +40,22 @@ int main() {
   uWS::Hub h;
 
   // Waypoint map to read from
-  string map_file_ = "../path-planning/data/highway_map.csv";
+  string map_file_ = "../data/highway_map.csv";
+  ifstream in_map_;
 
-  ifstream in_map_(map_file_.c_str(), ifstream::in);
+  in_map_.open(map_file_.c_str(), ifstream::in);
+  while (in_map_.fail())
+  {
+    std::cout<<"ERROR: Problem reading the map data file in "<<map_file_<<"."<<std::endl
+             <<"Please enter the correct file name (empty string: exit)."<<std::endl<<std::endl;
+    std::cout<<"file name: ";
+    getline(cin, map_file_);
+    in_map_.open(map_file_.c_str(), ifstream::in);
+    std::cout<<std::endl;
+  }
+
+  std::cout<<"Reading map data from "<<map_file_<<" was successful."<<std::endl;
+
   HighwayMap highway_map(in_map_);
 
   chrono::system_clock::time_point start_time = chrono::system_clock::now();
